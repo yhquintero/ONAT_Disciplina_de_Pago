@@ -1,13 +1,14 @@
 {
-  "name": "onat_disciplina_de_pago",
+  "name": "onat-disciplina-de-pago",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Panel web local de análisis de disciplina de pago y cobros",
   "scripts": {
     "test": "node --test",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "check": "npm test && npm run build && npm run check:dist",
+    "check:dist": "node scripts/check-public-artifact.mjs"
   },
   "repository": {
     "type": "git",
@@ -32,5 +33,9 @@
     "@vitejs/plugin-react": "^6.1.2",
     "vite": "^8.3.5"
   },
-  "type": "module"
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
 }
