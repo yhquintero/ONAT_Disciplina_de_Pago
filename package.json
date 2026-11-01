@@ -1,0 +1,36 @@
+{
+  "name": "onat_disciplina_de_pago",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test",
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yhquintero/ONAT_Disciplina_de_Pago.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yhquintero/ONAT_Disciplina_de_Pago/issues"
+  },
+  "homepage": "https://github.com/yhquintero/ONAT_Disciplina_de_Pago#readme",
+  "dependencies": {
+    "@e965/xlsx": "^0.20.3",
+    "chart.js": "^4.6.1",
+    "lucide-react": "^1.66.0",
+    "react": "^19.3.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5"
+  },
+  "type": "module"
+}
