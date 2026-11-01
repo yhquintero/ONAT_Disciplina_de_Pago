@@ -39,8 +39,6 @@ import {
   PointElement,
   Tooltip,
 } from 'chart.js';
-import clientSampleUrl from '../.xlsx/Cliente - obligación (vector fiscal).xlsx?url';
-import paymentSampleUrl from '../.xlsx/Pago1 (persona jurídica).xlsx?url';
 import {
   bestPeriod,
   buildDashboardModel,
@@ -66,6 +64,10 @@ const navItems = [
   { id: 'charts', label: 'Gráficos dinámicos', icon: BarChart3 },
   { id: 'clients', label: 'Contribuyentes', icon: Users },
 ];
+
+const DEMO_DATA_ENABLED = import.meta.env.DEV;
+const DEMO_CLIENTS_URL = '/.xlsx/Cliente%20-%20obligaci%C3%B3n%20(vector%20fiscal).xlsx';
+const DEMO_PAYMENTS_URL = '/.xlsx/Pago1%20(persona%20jur%C3%ADdica).xlsx';
 
 const dimensionLabels = {
   dpa: 'Dirección provincial (DPA)',
@@ -667,6 +669,31 @@ function StatusBadge({ status }) {
   );
 }
 
+function GetStartedCard({ data, onImport }) {
+  return (
+    <section className="surface-card welcome-card">
+      <div className="welcome-symbol"><FileSpreadsheet size={23} /></div>
+      <div className="welcome-kicker">CONFIGURACIÓN INICIAL</div>
+      <h2>Importa tus Excel para comenzar</h2>
+      <p>Sube el padrón completo y el registro de pagos. El panel los cruzará en este navegador para mostrar cobros, atrasos y clientes sin pago registrado.</p>
+      <div className="welcome-steps">
+        <div className={`welcome-step ${data.clientMeta ? 'step-ready' : ''}`}>
+          <span className="welcome-step-number">{data.clientMeta ? <Check size={14} /> : '01'}</span>
+          <span className="welcome-step-copy"><strong>Padrón de clientes</strong><small>{data.clientMeta ? `${countLabel(data.clientMeta.count)} contribuyentes cargados` : 'Columna requerida: Contribuyente'}</small></span>
+          <span className="welcome-step-status">{data.clientMeta ? 'Listo' : 'Pendiente'}</span>
+        </div>
+        <div className={`welcome-step ${data.paymentMeta ? 'step-ready' : ''}`}>
+          <span className="welcome-step-number">{data.paymentMeta ? <Check size={14} /> : '02'}</span>
+          <span className="welcome-step-copy"><strong>Registro de pagos</strong><small>{data.paymentMeta ? `${countLabel(data.paymentMeta.count)} pagos cargados` : 'Contribuyente, Importe ($) y Fecha de pago'}</small></span>
+          <span className="welcome-step-status">{data.paymentMeta ? 'Listo' : 'Pendiente'}</span>
+        </div>
+      </div>
+      <button type="button" className="primary-button welcome-import" onClick={onImport}><Upload size={16} /> Importar archivos Excel</button>
+      <div className="welcome-privacy"><LockKeyhole size={14} /> Los datos se procesan localmente y no se envían a un servidor.</div>
+    </section>
+  );
+}
+
 function SummaryView({ model, period, workingDays, onViewAll, onImport, onDismissQuarterly }) {
   return (
     <>
@@ -1133,11 +1160,18 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!DEMO_DATA_ENABLED) {
+      // A production/HTTPS build starts blank so the repository's example
+      // spreadsheets are never copied into the public Pages artifact.
+      setLoadingSample(false);
+      return () => { cancelled = true; };
+    }
+
     async function loadSamples() {
       setLoadingSample(true);
       setSampleError('');
       try {
-        const [clientsResponse, paymentsResponse] = await Promise.all([fetch(clientSampleUrl), fetch(paymentSampleUrl)]);
+        const [clientsResponse, paymentsResponse] = await Promise.all([fetch(DEMO_CLIENTS_URL), fetch(DEMO_PAYMENTS_URL)]);
         if (!clientsResponse.ok || !paymentsResponse.ok) throw new Error('No se pudieron abrir los Excel de muestra.');
         const [clientsBuffer, paymentsBuffer] = await Promise.all([clientsResponse.arrayBuffer(), paymentsResponse.arrayBuffer()]);
         const [clientsResult, paymentsResult] = await Promise.all([
@@ -1153,7 +1187,7 @@ function App() {
           paymentMeta: { fileName: paymentsResult.fileName, count: paymentsResult.payments.length, size: paymentsBuffer.byteLength, sample: true, skippedRows: paymentsResult.skippedRows },
         });
       } catch (error) {
-        if (!cancelled) setSampleError(error.message || 'No se pudieron cargar los datos de muestra.');
+        if (!cancelled) setSampleError(error.message || 'No se pudieron cargar los Excel de muestra.');
       } finally {
         if (!cancelled) setLoadingSample(false);
       }
@@ -1354,43 +1388,49 @@ function App() {
             </Notice>
           )}
 
-          <StatsGrid model={model} loading={loadingSample} />
+          {!loadingSample && !data.payments.length ? (
+            <GetStartedCard data={data} onImport={() => setImportOpen(true)} />
+          ) : (
+            <>
+              <StatsGrid model={model} loading={loadingSample} />
 
-          {activeView === 'overview' && (
-            <SummaryView
-              model={{ ...model, quarterlyWarning: model.quarterlyWarning && !quarterlyNoticeDismissed }}
-              period={period}
-              workingDays={workingDays}
-              onViewAll={() => handleNavigate('clients')}
-              onImport={() => setImportOpen(true)}
-              onDismissQuarterly={() => setQuarterlyNoticeDismissed(true)}
-            />
-          )}
+              {activeView === 'overview' && (
+                <SummaryView
+                  model={{ ...model, quarterlyWarning: model.quarterlyWarning && !quarterlyNoticeDismissed }}
+                  period={period}
+                  workingDays={workingDays}
+                  onViewAll={() => handleNavigate('clients')}
+                  onImport={() => setImportOpen(true)}
+                  onDismissQuarterly={() => setQuarterlyNoticeDismissed(true)}
+                />
+              )}
 
-          {activeView === 'charts' && (
-            <ChartsView
-              model={model}
-              period={period}
-              pivot={pivot}
-              pivotOptions={pivotOptions}
-              pivotConfig={pivotConfig}
-              setPivotConfig={setPivotConfig}
-              onExport={exportPivot}
-            />
-          )}
+              {activeView === 'charts' && (
+                <ChartsView
+                  model={model}
+                  period={period}
+                  pivot={pivot}
+                  pivotOptions={pivotOptions}
+                  pivotConfig={pivotConfig}
+                  setPivotConfig={setPivotConfig}
+                  onExport={exportPivot}
+                />
+              )}
 
-          {activeView === 'clients' && (
-            <ClientsView
-              model={model}
-              period={period}
-              search={search}
-              setSearch={setSearch}
-              statusTab={statusTab}
-              setStatusTab={setStatusTab}
-              rows={visibleClientRows}
-              onExport={exportClients}
-              onImport={() => setImportOpen(true)}
-            />
+              {activeView === 'clients' && (
+                <ClientsView
+                  model={model}
+                  period={period}
+                  search={search}
+                  setSearch={setSearch}
+                  statusTab={statusTab}
+                  setStatusTab={setStatusTab}
+                  rows={visibleClientRows}
+                  onExport={exportClients}
+                  onImport={() => setImportOpen(true)}
+                />
+              )}
+            </>
           )}
 
           <footer className="page-footer">

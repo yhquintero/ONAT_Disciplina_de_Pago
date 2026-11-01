@@ -4,3 +4,9 @@ dist/
 *.log
 .env
 .env.*
+
+# Evita versionar accidentalmente padrones y registros fiscales de clientes.
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
