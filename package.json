@@ -11,7 +11,9 @@
     "check:dist": "node scripts/check-public-artifact.mjs",
     "dev:https": "cross-env LOCAL_HTTPS=true vite --host 0.0.0.0 --port 5173 --strictPort",
     "dev:preview": "cross-env LOCAL_HTTPS=false vite --host 0.0.0.0",
-    "dev:http": "cross-env LOCAL_HTTPS=false vite --host 0.0.0.0 --port 5173 --strictPort"
+    "dev:http": "cross-env LOCAL_HTTPS=false vite --host 0.0.0.0 --port 5173 --strictPort",
+    "build:desktop": "cross-env VITE_PORTABLE_BUILD=true vite build",
+    "package:portable:windows": "npm run build:desktop && cross-env ELECTRON_INSTALL_PLATFORM=win32 ELECTRON_INSTALL_ARCH=x64 node node_modules/electron/install.js && electron-builder --win portable --x64"
   },
   "repository": {
     "type": "git",
@@ -39,6 +41,8 @@
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "cross-env": "^10.1.0",
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0",
     "vite": "^8.3.5"
   },
   "type": "module",
@@ -49,5 +53,40 @@
   "overrides": {
     "minimatch": "^11.0.3",
     "uuid": "^11.1.1"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "cu.onat.disciplina-de-pago",
+    "productName": "ONAT Disciplina de Pago",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/main.cjs",
+      "assets/onat.ico",
+      "dist/**/*",
+      "package.json",
+      "!node_modules/**",
+      "!**/*.xls",
+      "!**/*.xlsx",
+      "!**/*.xlsm",
+      "!**/*.xlsb"
+    ],
+    "npmRebuild": false,
+    "compression": "maximum",
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "ONAT-Disciplina-de-Pago-${version}-portable-${arch}.${ext}",
+      "icon": "assets/onat.ico",
+      "signExecutable": false
+    }
   }
 }
