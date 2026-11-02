@@ -82,7 +82,7 @@ $script:ServerPollTimer = $null
 
 function New-UiLabel {
     param(
-        [Parameter(Mandatory = $true)][string]$Text,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
         [float]$FontSize = 9,
         [bool]$Bold = $false,
         [System.Drawing.Color]$ForeColor = [System.Drawing.Color]::FromArgb(31, 49, 66),
