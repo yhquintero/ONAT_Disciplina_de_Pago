@@ -12,11 +12,15 @@ import {
   CircleDollarSign,
   Clock3,
   Download,
+  FileDown,
+  FileOutput,
   FileSpreadsheet,
   FileText,
   Info,
   LayoutDashboard,
   LockKeyhole,
+  Printer,
+  RotateCcw,
   Search,
   Settings2,
   SlidersHorizontal,
@@ -48,6 +52,7 @@ import {
   uniqueTaxOptions,
 } from './analytics.js';
 import { normalizeText, parseWorkbook } from './data.js';
+import { createFilename, createPdfBlob, createXlsxBlob } from './exporters.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
 
@@ -268,7 +273,7 @@ function LandmarkMark() {
   );
 }
 
-function TopBar({ onImport, onSettings, currentTitle }) {
+function TopBar({ onImport, onExport, exportDisabled, showExport, onSettings, currentTitle }) {
   return (
     <div className="topbar">
       <div className="topbar-breadcrumb">
@@ -281,6 +286,7 @@ function TopBar({ onImport, onSettings, currentTitle }) {
         <button type="button" className="icon-button settings-trigger" aria-label="Configurar regla de pago" onClick={onSettings}>
           <Settings2 size={18} />
         </button>
+        {showExport && <button type="button" className="secondary-button top-export" onClick={onExport} disabled={exportDisabled}><Download size={15} /><span>Exportar</span></button>}
         <button type="button" className="primary-button top-import" onClick={onImport}>
           <Upload size={16} />
           <span>Importar Excel</span>
@@ -413,7 +419,7 @@ function StatsGrid({ model, loading }) {
         icon={Users}
         label="Contribuyentes con pago"
         value={countLabel(model.paidCount)}
-        description={`de ${countLabel(model.expectedCount)} en el padrón`}
+        description={`de ${countLabel(model.expectedCount)} en el Patrón`}
         tone="teal"
         loading={loading}
       />
@@ -543,7 +549,7 @@ function StatusDonut({ model, valueType = 'amount' }) {
         />
         <div className="donut-center">
           <strong>{valueType === 'clients' ? countLabel(model.expectedCount) : compactMoney(model.totalAmount)}</strong>
-          <span>{valueType === 'clients' ? 'en padrón' : 'cobrado'}</span>
+          <span>{valueType === 'clients' ? 'en Patrón' : 'cobrado'}</span>
         </div>
       </div>
       <div className="donut-legend">
@@ -616,9 +622,9 @@ function PreviewTable({ model, onViewAll }) {
   return (
     <section className="surface-card preview-table-card">
       <CardHeader
-        eyebrow="SEGUIMIENTO DEL PADRÓN"
+        eyebrow="SEGUIMIENTO DEL PATRÓN"
         title="Últimos estados"
-        subtitle={model.expectedCount ? `${countLabel(model.expectedCount)} contribuyentes en el período` : 'Sin registros de padrón'}
+        subtitle={model.expectedCount ? `${countLabel(model.expectedCount)} contribuyentes en el período` : 'Sin registros de Patrón'}
         action={<button type="button" className="text-button" onClick={onViewAll}>Ver todos <ArrowRight size={15} /></button>}
       />
       {rows.length ? (
@@ -653,7 +659,7 @@ function EmptyTable({ onImport }) {
     <div className="empty-table-state">
       <div className="empty-chart-icon"><Users size={20} /></div>
       <strong>No hay contribuyentes para este filtro</strong>
-      <span>Revisa el tributo seleccionado o importa un padrón de clientes.</span>
+      <span>Revisa el tributo seleccionado o importa un Patrón de clientes.</span>
       <button type="button" className="text-button" onClick={onImport}>Revisar datos <ArrowRight size={15} /></button>
     </div>
   );
@@ -675,11 +681,11 @@ function GetStartedCard({ data, onImport }) {
       <div className="welcome-symbol"><FileSpreadsheet size={23} /></div>
       <div className="welcome-kicker">CONFIGURACIÓN INICIAL</div>
       <h2>Importa tus Excel para comenzar</h2>
-      <p>Sube el padrón completo y el registro de pagos. El panel los cruzará en este navegador para mostrar cobros, atrasos y clientes sin pago registrado.</p>
+      <p>Sube el Patrón completo y el registro de pagos. El panel los cruzará en este navegador para mostrar cobros, atrasos y clientes sin pago registrado.</p>
       <div className="welcome-steps">
         <div className={`welcome-step ${data.clientMeta ? 'step-ready' : ''}`}>
           <span className="welcome-step-number">{data.clientMeta ? <Check size={14} /> : '01'}</span>
-          <span className="welcome-step-copy"><strong>Padrón de clientes</strong><small>{data.clientMeta ? `${countLabel(data.clientMeta.count)} contribuyentes cargados` : 'Columna requerida: Contribuyente'}</small></span>
+          <span className="welcome-step-copy"><strong>Patrón de clientes</strong><small>{data.clientMeta ? `${countLabel(data.clientMeta.count)} contribuyentes cargados` : 'Columna requerida: Contribuyente'}</small></span>
           <span className="welcome-step-status">{data.clientMeta ? 'Listo' : 'Pendiente'}</span>
         </div>
         <div className={`welcome-step ${data.paymentMeta ? 'step-ready' : ''}`}>
@@ -698,13 +704,13 @@ function SummaryView({ model, period, workingDays, onViewAll, onImport, onDismis
   return (
     <>
       {model.missingRoster && (
-        <Notice icon={Info} tone="info" title="Falta el padrón de clientes">
-          El Excel de pagos solo muestra a quienes pagaron. Importa un padrón completo para identificar quién no tiene pago registrado.
-          <button type="button" className="inline-link" onClick={onImport}>Importar padrón</button>
+        <Notice icon={Info} tone="info" title="Falta el Patrón de clientes">
+          El Excel de pagos solo muestra a quienes pagaron. Importa un Patrón completo para identificar quién no tiene pago registrado.
+          <button type="button" className="inline-link" onClick={onImport}>Importar Patrón</button>
         </Notice>
       )}
       {model.quarterlyWarning && (
-        <Notice icon={AlertTriangle} tone="warning" title="El padrón indica periodicidad trimestral" onClose={onDismissQuarterly}>
+        <Notice icon={AlertTriangle} tone="warning" title="El Patrón indica periodicidad trimestral" onClose={onDismissQuarterly}>
           Los estados se calculan con la regla mensual de {workingDays} días hábiles que configuraste. Comprueba que el período seleccionado corresponda a una obligación mensual antes de usar estos resultados como notificación oficial.
         </Notice>
       )}
@@ -756,16 +762,44 @@ function PivotExplorer({
   setScope,
   rosterOnly,
   setRosterOnly,
+  chartType,
+  setChartType,
+  limit,
+  setLimit,
   period,
 }) {
   const isCount = metric !== 'amount';
   const isCategory = !['period', 'paymentMonth'].includes(dimension);
-  const horizontal = isCategory;
+  const horizontal = chartType === 'bar' && isCategory;
   const hasData = pivot.values.some((value) => value > 0);
-  const chartOptions = isCount ? chartCountOptions(horizontal) : chartCurrencyOptions(horizontal);
-  chartOptions.plugins.tooltip.callbacks.title = (items) => pivot.labels[items[0]?.dataIndex] || '';
-  chartOptions.plugins.tooltip.callbacks.label = (context) => ` ${isCount ? countLabel(context.parsed[horizontal ? 'x' : 'y'] ?? context.raw) : money(context.parsed[horizontal ? 'x' : 'y'] ?? context.raw)}`;
   const palette = ['#2e7bc7', '#249789', '#e9a24b', '#6276c4', '#89b7dd', '#58b8ad', '#e48666', '#8a91bd', '#5d9c88', '#bd8a48', '#6d9dc9', '#a7b8c9'];
+  const valueLabel = (value) => isCount ? countLabel(value) : money(value);
+  const barOptions = isCount ? chartCountOptions(horizontal) : chartCurrencyOptions(horizontal);
+  barOptions.plugins.tooltip.callbacks.title = (items) => pivot.labels[items[0]?.dataIndex] || '';
+  barOptions.plugins.tooltip.callbacks.label = (context) => ` ${valueLabel(context.parsed[horizontal ? 'x' : 'y'] ?? context.raw)}`;
+  const lineOptions = isCount ? chartCountOptions(false) : chartCurrencyOptions(false);
+  lineOptions.plugins.tooltip.callbacks.title = (items) => pivot.labels[items[0]?.dataIndex] || '';
+  lineOptions.plugins.tooltip.callbacks.label = (context) => ` ${valueLabel(context.parsed.y ?? context.raw)}`;
+  const donutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '63%',
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: { color: '#718394', usePointStyle: true, pointStyle: 'circle', boxWidth: 7, boxHeight: 7, padding: 12, font: { size: 9 } },
+      },
+      tooltip: {
+        backgroundColor: '#14283a',
+        padding: 11,
+        callbacks: {
+          title: (items) => pivot.labels[items[0]?.dataIndex] || '',
+          label: (context) => ` ${valueLabel(context.raw)}`,
+        },
+      },
+    },
+  };
 
   return (
     <section className="surface-card pivot-card">
@@ -775,7 +809,7 @@ function PivotExplorer({
           <div>
             <div className="card-eyebrow">EXPLORADOR DE DATOS</div>
             <h2>Gráfico dinámico</h2>
-            <p>Combina una dimensión y una métrica para explorar los cobros.</p>
+            <p>Elige agrupación, métrica y estilo para leer mejor los cobros.</p>
           </div>
         </div>
         <span className="pivot-count">{countLabel(pivot.transactionCount)} registros</span>
@@ -798,6 +832,26 @@ function PivotExplorer({
           <ChevronDown size={14} />
         </label>
         <label className="pivot-select-wrap">
+          <span>Tipo de gráfico</span>
+          <select value={chartType} onChange={(event) => setChartType(event.target.value)}>
+            <option value="bar">Barras</option>
+            <option value="line">Líneas</option>
+            <option value="area">Área</option>
+            <option value="doughnut">Dona</option>
+          </select>
+          <ChevronDown size={14} />
+        </label>
+        <label className="pivot-select-wrap">
+          <span>Grupos visibles</span>
+          <select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
+            <option value={5}>Top 5</option>
+            <option value={10}>Top 10</option>
+            <option value={20}>Top 20</option>
+            <option value={0}>Todos</option>
+          </select>
+          <ChevronDown size={14} />
+        </label>
+        <label className="pivot-select-wrap">
           <span>Período</span>
           <select value={scope} onChange={(event) => setScope(event.target.value)}>
             <option value="all">Todos los períodos</option>
@@ -808,43 +862,65 @@ function PivotExplorer({
         <label className="pivot-toggle">
           <input type="checkbox" checked={rosterOnly} onChange={(event) => setRosterOnly(event.target.checked)} />
           <span className="toggle-ui" />
-          <span>Solo padrón</span>
+          <span>Solo Patrón</span>
         </label>
       </div>
-      <div className={`pivot-chart-area ${horizontal ? 'pivot-horizontal' : ''}`}>
+      <div className={`pivot-chart-area ${horizontal ? 'pivot-horizontal' : ''} ${chartType === 'doughnut' ? 'pivot-doughnut' : ''}`}>
         {hasData ? (
-          <Bar
-            data={{
-              labels: pivot.labels,
-              datasets: [{
-                data: pivot.values,
-                backgroundColor: pivot.values.map((_, index) => palette[index % palette.length]),
-                borderRadius: 5,
-                maxBarThickness: horizontal ? 19 : 34,
-                barPercentage: 0.72,
-              }],
-            }}
-            options={{
-              ...chartOptions,
-              indexAxis: horizontal ? 'y' : 'x',
-              plugins: {
-                ...chartOptions.plugins,
-                legend: { display: false },
-              },
-            }}
-          />
+          chartType === 'bar' ? (
+            <Bar
+              data={{
+                labels: pivot.labels,
+                datasets: [{
+                  data: pivot.values,
+                  backgroundColor: pivot.values.map((_, index) => palette[index % palette.length]),
+                  borderRadius: 5,
+                  maxBarThickness: horizontal ? 19 : 34,
+                  barPercentage: 0.72,
+                }],
+              }}
+              options={{ ...barOptions, indexAxis: horizontal ? 'y' : 'x', plugins: { ...barOptions.plugins, legend: { display: false } } }}
+            />
+          ) : chartType === 'doughnut' ? (
+            <Doughnut
+              data={{
+                labels: pivot.labels,
+                datasets: [{ data: pivot.values, backgroundColor: pivot.values.map((_, index) => palette[index % palette.length]), borderWidth: 0, hoverOffset: 5, spacing: 2 }],
+              }}
+              options={donutOptions}
+            />
+          ) : (
+            <Line
+              data={{
+                labels: pivot.labels,
+                datasets: [{
+                  data: pivot.values,
+                  borderColor: '#2876ce',
+                  backgroundColor: chartType === 'area' ? 'rgba(40, 118, 206, .14)' : 'rgba(40, 118, 206, .03)',
+                  pointBackgroundColor: '#ffffff',
+                  pointBorderColor: '#2876ce',
+                  pointBorderWidth: 2,
+                  pointRadius: 3.5,
+                  borderWidth: 2.4,
+                  tension: 0.34,
+                  fill: chartType === 'area',
+                }],
+              }}
+              options={{ ...lineOptions, plugins: { ...lineOptions.plugins, legend: { display: false } } }}
+            />
+          )
         ) : <EmptyChart message="No hay datos para los filtros seleccionados." />}
       </div>
       <div className="pivot-card-foot">
         <span><Info size={14} /> La dimensión y el período se recalculan al cambiar los filtros.</span>
-        <span>{pivot.rows.length > 12 && !['period', 'paymentMonth'].includes(dimension) ? 'Se muestran los 12 grupos principales.' : 'Se muestran todos los grupos disponibles.'}</span>
+        <span>{limit > 0 && pivot.totalGroupCount > pivot.rows.length ? `Se muestran los ${limit} grupos principales de ${countLabel(pivot.totalGroupCount)}.` : 'Se muestran todos los grupos disponibles.'}</span>
       </div>
     </section>
   );
 }
 
 function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotConfig, onExport }) {
-  const { dimension, metric, scope, rosterOnly } = pivotConfig;
+  const { dimension, metric, scope, rosterOnly, chartType, limit } = pivotConfig;
   const change = (key, value) => setPivotConfig((previous) => ({ ...previous, [key]: value }));
   return (
     <div className="charts-view">
@@ -867,11 +943,15 @@ function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotC
         setScope={(value) => change('scope', value)}
         rosterOnly={rosterOnly}
         setRosterOnly={(value) => change('rosterOnly', value)}
+        chartType={chartType}
+        setChartType={(value) => change('chartType', value)}
+        limit={limit}
+        setLimit={(value) => change('limit', value)}
         period={period}
       />
       <div className="charts-section-heading">
         <div><span className="card-eyebrow">RESUMEN DEL PERÍODO</span><h3>{period ? monthLabel(period) : 'Sin período seleccionado'}</h3></div>
-        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar vista CSV</button>
+        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar datos</button>
       </div>
       <div className="content-grid chart-grid-summary charts-secondary-grid">
         <section className="surface-card chart-card">
@@ -879,7 +959,7 @@ function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotC
           <div className="chart-area payment-month-area"><PaymentMonthChart model={model} /></div>
         </section>
         <section className="surface-card chart-card">
-          <CardHeader eyebrow="ESTADO DE LOS CLIENTES" title="Puntualidad del padrón" subtitle="Contribuyentes, no importe" />
+          <CardHeader eyebrow="ESTADO DE LOS CLIENTES" title="Puntualidad del Patrón" subtitle="Contribuyentes, no importe" />
           <div className="chart-area donut-area"><StatusDonut model={model} valueType="clients" /></div>
         </section>
       </div>
@@ -902,16 +982,16 @@ function ClientsView({ model, period, search, setSearch, statusTab, setStatusTab
     <div className="clients-view">
       <div className="view-intro-row clients-intro">
         <div>
-          <div className="section-kicker"><Users size={15} /> PADRÓN DE CONTRIBUYENTES</div>
+          <div className="section-kicker"><Users size={15} /> PATRÓN DE CONTRIBUYENTES</div>
           <h2>Seguimiento de pagos</h2>
           <p>{period ? `Estado de pago de cada cliente para ${monthLabel(period)}.` : 'Selecciona un período para ver el estado de pago.'}</p>
         </div>
-        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar CSV</button>
+        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar datos</button>
       </div>
       {model.missingRoster && (
-        <Notice icon={Info} tone="info" title="Falta un padrón completo">
+        <Notice icon={Info} tone="info" title="Falta un Patrón completo">
           Sin el listado de clientes esperados no es posible identificar a quienes no pagaron. Importa un Excel de clientes para completar este seguimiento.
-          <button type="button" className="inline-link" onClick={onImport}>Importar padrón</button>
+          <button type="button" className="inline-link" onClick={onImport}>Importar Patrón</button>
         </Notice>
       )}
       <section className="surface-card clients-table-card">
@@ -1014,7 +1094,7 @@ function ImportCard({ role, meta, busy, onSelect }) {
       </div>
       <div className="import-card-copy">
         <div className="import-card-title-row">
-          <h3>{isClients ? 'Padrón de clientes' : 'Registro de pagos'}</h3>
+          <h3>{isClients ? 'Patrón de clientes' : 'Registro de pagos'}</h3>
           {meta && <span className="file-ready-chip"><Check size={12} /> Cargado</span>}
         </div>
         <p>{isClients ? 'Listado con todos los contribuyentes que deben ser revisados.' : 'Transacciones con Contribuyente, Importe ($) y Fecha de pago.'}</p>
@@ -1052,7 +1132,7 @@ function ImportModal({ open, onClose, onImport, data, busyRole, lastImport }) {
           <div><div className="modal-eyebrow">ACTUALIZAR INFORMACIÓN</div><h2 id="import-title">Importar desde Excel</h2></div>
           <button type="button" className="icon-button modal-close" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
-        <p className="modal-intro">Separa el padrón de clientes del registro de pagos para detectar contribuyentes sin pago y analizar los cobros.</p>
+        <p className="modal-intro">Separa el Patrón de clientes del registro de pagos para detectar contribuyentes sin pago y analizar los cobros.</p>
         <div className="import-cards">
           <ImportCard role="clients" meta={data.clientMeta} busy={busyRole === 'clients'} onSelect={onImport} />
           <ImportCard role="payments" meta={data.paymentMeta} busy={busyRole === 'payments'} onSelect={onImport} />
@@ -1064,6 +1144,100 @@ function ImportModal({ open, onClose, onImport, data, busyRole, lastImport }) {
         </div>
         <div className="modal-privacy"><LockKeyhole size={14} /> Los libros se leen en este navegador y no se envían a un servidor.</div>
         <div className="modal-footer"><span>Las preferencias de vencimiento sí se guardan en este dispositivo.</span><button type="button" className="secondary-button" onClick={onClose}>Listo</button></div>
+      </section>
+    </div>
+  );
+}
+
+const paperOptions = [
+  { key: 'a4', label: 'A4', description: '210 × 297 mm' },
+  { key: 'letter', label: 'Carta', description: '8.5 × 11 in' },
+  { key: 'a3', label: 'A3', description: '297 × 420 mm' },
+  { key: 'legal', label: 'Legal', description: '8.5 × 14 in' },
+  { key: 'a5', label: 'A5', description: '148 × 210 mm' },
+];
+
+function ExportModal({ open, onClose, onExport, payload, busy }) {
+  const [format, setFormat] = useState('xlsx');
+  const [paperSize, setPaperSize] = useState('a4');
+  const [orientation, setOrientation] = useState('landscape');
+  useEffect(() => {
+    if (open) {
+      setFormat('xlsx');
+      setPaperSize('a4');
+      setOrientation('landscape');
+    }
+  }, [open]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+  if (!open || !payload) return null;
+
+  const formats = [
+    { key: 'xlsx', title: 'Excel (.xlsx)', detail: 'Editable y preparado para impresión', icon: FileSpreadsheet },
+    { key: 'pdf', title: 'PDF', detail: 'Documento paginado para compartir o imprimir', icon: FileText },
+    { key: 'csv', title: 'CSV', detail: 'Datos simples para otros sistemas', icon: FileOutput },
+  ];
+  const extension = format === 'xlsx' ? '.xlsx' : format === 'pdf' ? '.pdf' : '.csv';
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="modal export-modal" role="dialog" aria-modal="true" aria-labelledby="export-title">
+        <div className="modal-header">
+          <div className="modal-title-icon export-modal-icon"><FileDown size={20} /></div>
+          <div><div className="modal-eyebrow">DESCARGAR REPORTE</div><h2 id="export-title">Exportar datos</h2></div>
+          <button type="button" className="icon-button modal-close" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
+        </div>
+        <p className="modal-intro">Se exportarán <strong>{countLabel(payload.rows.length)} filas</strong> de “{payload.title}”{payload.subtitle ? ` · ${payload.subtitle}` : ''}.</p>
+        <div className="export-format-grid" role="radiogroup" aria-label="Formato de exportación">
+          {formats.map(({ key, title: formatTitle, detail, icon: Icon }) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={format === key}
+              className={`export-format-card ${format === key ? 'format-selected' : ''}`}
+              key={key}
+              onClick={() => setFormat(key)}
+            >
+              <span className="format-card-icon"><Icon size={19} /></span>
+              <span className="format-card-copy"><strong>{formatTitle}</strong><small>{detail}</small></span>
+              <span className="format-radio" />
+            </button>
+          ))}
+        </div>
+        {format !== 'csv' && (
+          <div className="export-page-settings">
+            <div className="export-settings-heading"><Printer size={16} /><strong>Configuración de página</strong><span>Se aplica al Excel y al PDF</span></div>
+            <div className="export-settings-grid">
+              <label className="export-control">
+                <span>Tamaño de papel</span>
+                <select value={paperSize} onChange={(event) => setPaperSize(event.target.value)}>
+                  {paperOptions.map((paper) => <option key={paper.key} value={paper.key}>{paper.label} · {paper.description}</option>)}
+                </select>
+                <ChevronDown size={14} />
+              </label>
+              <div className="export-control orientation-control">
+                <span>Orientación</span>
+                <div className="orientation-options" role="group" aria-label="Orientación de la hoja">
+                  <button type="button" aria-pressed={orientation === 'landscape'} className={orientation === 'landscape' ? 'orientation-selected' : ''} onClick={() => setOrientation('landscape')}><RotateCcw size={14} /> Horizontal</button>
+                  <button type="button" aria-pressed={orientation === 'portrait'} className={orientation === 'portrait' ? 'orientation-selected' : ''} onClick={() => setOrientation('portrait')}><RotateCcw className="portrait-icon" size={14} /> Vertical</button>
+                </div>
+              </div>
+            </div>
+            <div className="export-format-note"><Info size={14} /> La primera columna irá en negrita; los anchos se ajustarán al contenido y la impresión se ajustará al ancho de la página.</div>
+          </div>
+        )}
+        <div className="modal-footer export-modal-footer">
+          <span>{format === 'csv' ? 'CSV conserva los valores sin formato de página.' : 'El tamaño elegido se guarda en la configuración de impresión.'}</span>
+          <div>
+            <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancelar</button>
+            <button type="button" className="primary-button" onClick={() => onExport({ format, paperSize, orientation })} disabled={busy}>
+              {busy ? <><span className="button-spinner" /> Preparando…</> : <><Download size={15} /> Descargar {extension}</>}
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -1147,13 +1321,16 @@ function App() {
   const [holidays, setHolidays] = useState(() => safeStorageRead('onat-holidays', []));
   const [importOpen, setImportOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportPayload, setExportPayload] = useState(null);
+  const [exportBusy, setExportBusy] = useState(false);
   const [busyRole, setBusyRole] = useState('');
   const [lastImport, setLastImport] = useState('');
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState('all');
   const [quarterlyNoticeDismissed, setQuarterlyNoticeDismissed] = useState(false);
-  const [pivotConfig, setPivotConfig] = useState({ dimension: 'period', metric: 'amount', scope: 'all', rosterOnly: true });
+  const [pivotConfig, setPivotConfig] = useState({ dimension: 'period', metric: 'amount', scope: 'all', rosterOnly: true, chartType: 'bar', limit: 10 });
 
   const periods = useMemo(() => Array.from(new Set(data.payments.map((payment) => payment.periodKey).filter(Boolean))).sort(), [data.payments]);
   const taxOptions = useMemo(() => uniqueTaxOptions(data.clients, data.payments), [data.clients, data.payments]);
@@ -1254,7 +1431,7 @@ function App() {
     metric: pivotConfig.metric,
     scope: pivotConfig.scope,
     rosterOnly: pivotConfig.rosterOnly,
-    limit: 12,
+    limit: pivotConfig.limit,
   }), [data.payments, data.clients, period, taxFilter, pivotConfig]);
 
   const visibleClientRows = useMemo(() => {
@@ -1291,13 +1468,13 @@ function App() {
           paymentMeta: { fileName: file.name, count: parsed.payments.length, size: file.size, skippedRows: parsed.skippedRows },
         }));
       }
-      const roleName = role === 'clients' ? 'padrón' : 'registro de pagos';
+      const roleName = role === 'clients' ? 'Patrón' : 'registro de pagos';
       const skipped = parsed.skippedRows ? ` Se omitieron ${countLabel(parsed.skippedRows)} filas incompletas.` : '';
       const dateNote = role === 'payments' && parsed.payments.every((payment) => payment.dateBasis === 'payment')
         ? ' El período se tomará de Fecha de pago.'
         : '';
       setLastImport(`${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas cargadas en el ${roleName}.${skipped}${dateNote}`);
-      setToast({ type: 'success', message: `${role === 'clients' ? 'Padrón' : 'Pagos'} importados: ${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas.` });
+      setToast({ type: 'success', message: `${role === 'clients' ? 'Patrón' : 'Pagos'} importados: ${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas.` });
     } catch (error) {
       setToast({ type: 'error', message: error.message || 'No se pudo leer el archivo.' });
     } finally {
@@ -1311,35 +1488,70 @@ function App() {
     setToast({ type: 'success', message: 'Regla de vencimiento actualizada.' });
   };
 
-  const visibleRowsForExport = visibleClientRows;
-  const exportClients = () => {
-    if (!visibleRowsForExport.length) {
-      setToast({ type: 'error', message: 'No hay filas visibles para exportar.' });
-      return;
-    }
+  const makeClientExport = (rows, title = 'Seguimiento de pagos') => {
     const headings = ['Contribuyente', 'Tributo', 'Estado', 'Importe cobrado ($)', 'Cantidad de pagos', 'Primer pago', 'Último pago', 'Días de atraso'];
-    const csvRows = visibleRowsForExport.map((row) => [
+    const taxLabel = taxFilter ? (taxOptions.find((option) => option.key === taxFilter)?.label || taxFilter) : 'Todos los tributos';
+    const subtitle = `Período: ${period ? monthLabel(period) : 'todos'} · Tributo: ${taxLabel} · Regla: ${workingDays} días hábiles`;
+    const exportRows = rows.map((row) => [
       row.contributor,
-      row.tax,
+      row.tax || '—',
       statusLabel(row.status),
-      row.amount.toFixed(2),
-      row.paymentCount,
-      row.firstPayment ? formatDate(row.firstPayment) : '',
-      row.lastPayment ? formatDate(row.lastPayment) : '',
-      row.lateDays || 0,
+      Number(row.amount) || 0,
+      Number(row.paymentCount) || 0,
+      row.firstPayment || null,
+      row.lastPayment || null,
+      Number(row.lateDays) || 0,
     ]);
-    downloadCSV(headings, csvRows, `seguimiento-${period || 'pagos'}.csv`);
+    return { title, fileBase: 'seguimiento', period, subtitle, headers: headings, rows: exportRows };
   };
 
-  const exportPivot = () => {
-    const headings = ['Agrupación', 'Valor', 'Métrica'];
+  const openClientExport = (rows = model.rosterRows, title = 'Seguimiento de pagos') => {
+    if (!rows.length) {
+      setToast({ type: 'error', message: 'No hay filas para exportar con estos filtros.' });
+      return;
+    }
+    setExportPayload(makeClientExport(rows, title));
+    setExportOpen(true);
+  };
+
+  const openPivotExport = () => {
     const metricLabel = pivotConfig.metric === 'amount' ? 'Suma de Importe ($)' : pivotConfig.metric === 'payments' ? 'Número de pagos' : 'Contribuyentes únicos';
-    const rows = pivot.rows.map((row) => [row.label, pivotConfig.metric === 'amount' ? row.value.toFixed(2) : row.value, metricLabel]);
+    const dimensionLabel = pivotOptions.find((option) => option.key === pivotConfig.dimension)?.label || pivotConfig.dimension;
+    const rows = pivot.rows.map((row) => [row.label, row.value, metricLabel]);
     if (!rows.length) {
       setToast({ type: 'error', message: 'No hay grupos para exportar.' });
       return;
     }
-    downloadCSV(headings, rows, `grafico-${pivotConfig.dimension}-${period || 'todos'}.csv`);
+    setExportPayload({
+      title: 'Datos del gráfico',
+      fileBase: `grafico-${pivotConfig.dimension}`,
+      period,
+      subtitle: `${dimensionLabel} · ${metricLabel} · ${pivotConfig.scope === 'all' ? 'todos los períodos' : monthLabel(period)}`,
+      headers: ['Agrupación', 'Valor', 'Métrica'],
+      rows,
+    });
+    setExportOpen(true);
+  };
+
+  const handleExport = async ({ format, paperSize, orientation }) => {
+    if (!exportPayload || exportBusy) return;
+    setExportBusy(true);
+    try {
+      const fileName = createFilename(exportPayload.fileBase || exportPayload.title, exportPayload.period || '', format);
+      if (format === 'csv') {
+        downloadCSV(exportPayload.headers, exportPayload.rows, fileName);
+      } else {
+        const options = { ...exportPayload, paperSize, orientation };
+        const blob = format === 'xlsx' ? await createXlsxBlob(options) : await createPdfBlob(options);
+        downloadBlob(blob, fileName);
+      }
+      setExportOpen(false);
+      setToast({ type: 'success', message: `Reporte ${format.toUpperCase()} descargado: ${fileName}` });
+    } catch (error) {
+      setToast({ type: 'error', message: error.message || 'No se pudo preparar la exportación.' });
+    } finally {
+      setExportBusy(false);
+    }
   };
 
   const handleNavigate = (view) => {
@@ -1359,7 +1571,14 @@ function App() {
     <div className="app-shell">
       <Sidebar activeView={activeView} onNavigate={handleNavigate} onImport={() => setImportOpen(true)} model={model} loading={loadingSample} />
       <main className="main-shell">
-        <TopBar onImport={() => setImportOpen(true)} onSettings={() => setSettingsOpen(true)} currentTitle={currentTitle} />
+        <TopBar
+          onImport={() => setImportOpen(true)}
+          onExport={() => openClientExport(model.rosterRows, 'Seguimiento de pagos')}
+          exportDisabled={loadingSample || !model.rosterRows.length}
+          showExport={activeView === 'overview' && model.rosterRows.length > 0}
+          onSettings={() => setSettingsOpen(true)}
+          currentTitle={currentTitle}
+        />
         <div className="main-content">
           <PageHeading
             title={title}
@@ -1376,7 +1595,7 @@ function App() {
           <DeadlineStrip model={model} period={period} workingDays={workingDays} holidays={holidays} loading={loadingSample} />
           {!loadingSample && <PeriodBasisNotice payments={data.payments} />}
           {activeView !== 'overview' && model.quarterlyWarning && !quarterlyNoticeDismissed && (
-            <Notice icon={AlertTriangle} tone="warning" title="El padrón indica periodicidad trimestral" onClose={() => setQuarterlyNoticeDismissed(true)}>
+            <Notice icon={AlertTriangle} tone="warning" title="El Patrón indica periodicidad trimestral" onClose={() => setQuarterlyNoticeDismissed(true)}>
               Los estados se calculan con la regla mensual de {workingDays} días hábiles. Comprueba que el período seleccionado corresponda a una obligación mensual.
             </Notice>
           )}
@@ -1413,7 +1632,7 @@ function App() {
                   pivotOptions={pivotOptions}
                   pivotConfig={pivotConfig}
                   setPivotConfig={setPivotConfig}
-                  onExport={exportPivot}
+                  onExport={openPivotExport}
                 />
               )}
 
@@ -1426,7 +1645,7 @@ function App() {
                   statusTab={statusTab}
                   setStatusTab={setStatusTab}
                   rows={visibleClientRows}
-                  onExport={exportClients}
+                  onExport={() => openClientExport(visibleClientRows, 'Seguimiento de contribuyentes')}
                   onImport={() => setImportOpen(true)}
                 />
               )}
@@ -1440,6 +1659,7 @@ function App() {
         </div>
       </main>
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} data={data} busyRole={busyRole} lastImport={lastImport} />
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} onExport={handleExport} payload={exportPayload} busy={exportBusy} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} workingDays={workingDays} holidays={holidays} onSave={handleSaveRule} />
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
@@ -1447,15 +1667,22 @@ function App() {
 }
 
 function downloadCSV(headings, rows, fileName) {
-  const escapeCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const escapeCell = (value) => {
+    const text = value instanceof Date ? formatDate(value) : String(value ?? '');
+    return `"${text.replace(/"/g, '""')}"`;
+  };
   const content = [headings, ...rows].map((row) => row.map(escapeCell).join(';')).join('\r\n');
   const blob = new Blob([`\ufeff${content}`], { type: 'text/csv;charset=utf-8' });
+  downloadBlob(blob, fileName);
+}
+
+function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export default App;

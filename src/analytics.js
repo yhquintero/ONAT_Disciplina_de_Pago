@@ -305,9 +305,11 @@ export function buildPivot({
   result.sort((a, b) => chronological
     ? a.key.localeCompare(b.key)
     : b.value - a.value || a.label.localeCompare(b.label, 'es'));
-  if (!chronological) result = result.slice(0, limit);
+  const totalGroupCount = result.length;
+  if (!chronological && Number(limit) > 0) result = result.slice(0, Number(limit));
   return {
     rows: result,
+    totalGroupCount,
     labels: result.map((row) => row.label),
     values: result.map((row) => row.value),
     transactionCount: rows.length,
