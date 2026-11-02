@@ -22,6 +22,7 @@ const rows = [[
   new Date('2026-03-11T00:00:00.000Z'),
   0,
 ]];
+const chartImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABaCAIAAACwpMoFAAAA+UlEQVR4nO3RQQnAMAAEwbiol6qIfzOphj5CyDLHCjiYsSy9cfqA7R3g+ADHBzg+wPEBjg9wfIDjAxwf4PgAxwc4PsDxAY4PcHyA4wMcH+D4AMcHOL7fwM87dTbA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcDzA8QDHAxwPcLy9wHbXAMcHOD7A8QGOD3B8gOMDHB/g+ADHBzg+wPEBjg9wfIDjAxzfB0vxGlzI1EQXAAAAAElFTkSuQmCC';
 
 test('crea XLSX con los encabezados, primera columna en negrita y página ajustada', async () => {
   const blob = await createXlsxBlob({ headers, rows, paperSize: 'letter', orientation: 'landscape', title: 'Seguimiento' });
@@ -44,6 +45,18 @@ test('crea PDF con orientación y tamaño de página seleccionados', async () =>
   assert.equal(blob.type, 'application/pdf');
   assert.match(await blob.slice(0, 8).text(), /^%PDF-/);
   assert.ok(blob.size > 1000);
+});
+
+test('incluye el gráfico como imagen en el PDF de gráficos dinámicos', async () => {
+  const blob = await createPdfBlob({
+    headers: ['Agrupación', 'Valor', 'Métrica'],
+    rows: [['marzo', 1250, 'Suma de Importe ($)']],
+    title: 'Gráfico dinámico',
+    subtitle: 'Período · Suma de Importe ($)',
+    chartImage,
+  });
+  const pdfText = Buffer.from(await blob.arrayBuffer()).toString('latin1');
+  assert.match(pdfText, /\/Subtype\s*\/Image/);
 });
 
 test('genera nombres de archivo seguros con el período', () => {

@@ -69,7 +69,7 @@ El valor inicial es **los primeros 10 días hábiles de cada mes**. En **Regla**
 - Indicadores de importe recaudado, contribuyentes con pago, pagos tardíos y clientes sin pago registrado.
 - Gráficos de evolución por período, puntualidad y ranking de contribuyentes.
 - Explorador dinámico: agrupa por período, fecha de pago, contribuyente, tributo y otras columnas detectadas; muestra suma de importe, número de pagos o contribuyentes únicos. Permite gráficos de barras, líneas, área y dona, además de limitar el número de grupos visibles.
-- Exportación a `.xlsx`, PDF y CSV. Los reportes de seguimiento incluyen Contribuyente, Tributo, Estado, Importe cobrado ($), Cantidad de pagos, Primer pago, Último pago y Días de atraso. Excel aplica negrita a la primera columna, ajusta anchos automáticamente y configura la impresión; PDF y Excel admiten A4, Carta, A3, Legal y A5, en orientación horizontal o vertical.
+- Exportación a `.xlsx`, PDF y CSV. Los reportes de seguimiento incluyen Contribuyente, Tributo, Estado, Importe cobrado ($), Cantidad de pagos, Primer pago, Último pago y Días de atraso. Excel aplica negrita a la primera columna, ajusta anchos automáticamente y configura la impresión; PDF y Excel admiten A4, Carta, A3, Legal y A5, en orientación horizontal o vertical. Al exportar el explorador dinámico a PDF, se incluyen el gráfico visible y su tabla de datos.
 - Filtros de período y tributo, búsqueda por contribuyente y preferencias de vencimiento/feriados guardadas localmente. Los libros importados viven en memoria hasta recargar o cerrar la pestaña.
 
 ## Ideas para mejoras futuras (por etapas)

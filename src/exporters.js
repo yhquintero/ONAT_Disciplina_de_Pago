@@ -124,6 +124,7 @@ export async function createPdfBlob({
   orientation = 'landscape',
   title = 'Seguimiento de pagos',
   subtitle = '',
+  chartImage = null,
 }) {
   const [jspdfModule, autoTableModule] = await Promise.all([
     import('jspdf'),
@@ -152,7 +153,18 @@ export async function createPdfBlob({
   const subtitleLines = subtitle ? doc.splitTextToSize(subtitle, pageWidth - margin * 2) : [];
   if (subtitleLines.length) doc.text(subtitleLines, margin, 21);
   doc.text(`Generado: ${new Intl.DateTimeFormat('es-CU').format(new Date())}`, pageWidth - margin, 15, { align: 'right' });
-  const tableStartY = Math.max(28, 24 + Math.max(0, subtitleLines.length - 1) * 3.8 + 4);
+  let tableStartY = Math.max(28, 24 + Math.max(0, subtitleLines.length - 1) * 3.8 + 4);
+  if (chartImage) {
+    const imageProperties = doc.getImageProperties(chartImage);
+    const maxChartWidth = pageWidth - margin * 2;
+    const maxChartHeight = Math.max(40, Math.min(115, pageHeight - tableStartY - margin - 30));
+    const imageScale = Math.min(maxChartWidth / imageProperties.width, maxChartHeight / imageProperties.height);
+    const imageWidth = imageProperties.width * imageScale;
+    const imageHeight = imageProperties.height * imageScale;
+    const imageX = margin + (maxChartWidth - imageWidth) / 2;
+    doc.addImage(chartImage, 'PNG', imageX, tableStartY, imageWidth, imageHeight, undefined, 'FAST');
+    tableStartY += imageHeight + 7;
+  }
 
   const amountColumns = new Set(headers.flatMap((header, index) => {
     const normalized = String(header).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -166,7 +178,7 @@ export async function createPdfBlob({
     head: [headers],
     body,
     startY: tableStartY,
-    margin: { top: tableStartY, right: margin, bottom: 13, left: margin },
+    margin: { top: 24, right: margin, bottom: 13, left: margin },
     tableWidth: 'auto',
     theme: 'grid',
     showHead: 'everyPage',

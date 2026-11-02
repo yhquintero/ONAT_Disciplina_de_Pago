@@ -754,6 +754,7 @@ function SummaryView({ model, period, workingDays, onViewAll, onImport, onDismis
 function PivotExplorer({
   pivot,
   options,
+  chartRef,
   dimension,
   setDimension,
   metric,
@@ -869,6 +870,7 @@ function PivotExplorer({
         {hasData ? (
           chartType === 'bar' ? (
             <Bar
+              ref={chartRef}
               data={{
                 labels: pivot.labels,
                 datasets: [{
@@ -883,6 +885,7 @@ function PivotExplorer({
             />
           ) : chartType === 'doughnut' ? (
             <Doughnut
+              ref={chartRef}
               data={{
                 labels: pivot.labels,
                 datasets: [{ data: pivot.values, backgroundColor: pivot.values.map((_, index) => palette[index % palette.length]), borderWidth: 0, hoverOffset: 5, spacing: 2 }],
@@ -891,6 +894,7 @@ function PivotExplorer({
             />
           ) : (
             <Line
+              ref={chartRef}
               data={{
                 labels: pivot.labels,
                 datasets: [{
@@ -919,7 +923,7 @@ function PivotExplorer({
   );
 }
 
-function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotConfig, onExport }) {
+function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotConfig, chartRef, onExport }) {
   const { dimension, metric, scope, rosterOnly, chartType, limit } = pivotConfig;
   const change = (key, value) => setPivotConfig((previous) => ({ ...previous, [key]: value }));
   return (
@@ -935,6 +939,7 @@ function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotC
       <PivotExplorer
         pivot={pivot}
         options={pivotOptions}
+        chartRef={chartRef}
         dimension={dimension}
         setDimension={(value) => change('dimension', value)}
         metric={metric}
@@ -1178,7 +1183,7 @@ function ExportModal({ open, onClose, onExport, payload, busy }) {
 
   const formats = [
     { key: 'xlsx', title: 'Excel (.xlsx)', detail: 'Editable y preparado para impresión', icon: FileSpreadsheet },
-    { key: 'pdf', title: 'PDF', detail: 'Documento paginado para compartir o imprimir', icon: FileText },
+    { key: 'pdf', title: 'PDF', detail: payload.chartImage ? 'Incluye el gráfico y su tabla de datos' : 'Documento paginado para compartir o imprimir', icon: FileText },
     { key: 'csv', title: 'CSV', detail: 'Datos simples para otros sistemas', icon: FileOutput },
   ];
   const extension = format === 'xlsx' ? '.xlsx' : format === 'pdf' ? '.pdf' : '.csv';
@@ -1230,7 +1235,7 @@ function ExportModal({ open, onClose, onExport, payload, busy }) {
           </div>
         )}
         <div className="modal-footer export-modal-footer">
-          <span>{format === 'csv' ? 'CSV conserva los valores sin formato de página.' : 'El tamaño elegido se guarda en la configuración de impresión.'}</span>
+          <span>{format === 'csv' ? 'CSV conserva los valores sin formato de página.' : 'La configuración elegida se aplicará a este archivo.'}</span>
           <div>
             <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancelar</button>
             <button type="button" className="primary-button" onClick={() => onExport({ format, paperSize, orientation })} disabled={busy}>
@@ -1331,6 +1336,7 @@ function App() {
   const [statusTab, setStatusTab] = useState('all');
   const [quarterlyNoticeDismissed, setQuarterlyNoticeDismissed] = useState(false);
   const [pivotConfig, setPivotConfig] = useState({ dimension: 'period', metric: 'amount', scope: 'all', rosterOnly: true, chartType: 'bar', limit: 10 });
+  const pivotChartRef = useRef(null);
 
   const periods = useMemo(() => Array.from(new Set(data.payments.map((payment) => payment.periodKey).filter(Boolean))).sort(), [data.payments]);
   const taxOptions = useMemo(() => uniqueTaxOptions(data.clients, data.payments), [data.clients, data.payments]);
@@ -1523,10 +1529,11 @@ function App() {
       return;
     }
     setExportPayload({
-      title: 'Datos del gráfico',
+      title: 'Gráfico dinámico',
       fileBase: `grafico-${pivotConfig.dimension}`,
       period,
       subtitle: `${dimensionLabel} · ${metricLabel} · ${pivotConfig.scope === 'all' ? 'todos los períodos' : monthLabel(period)}`,
+      chartImage: pivotChartRef.current?.toBase64Image?.() || null,
       headers: ['Agrupación', 'Valor', 'Métrica'],
       rows,
     });
@@ -1632,6 +1639,7 @@ function App() {
                   pivotOptions={pivotOptions}
                   pivotConfig={pivotConfig}
                   setPivotConfig={setPivotConfig}
+                  chartRef={pivotChartRef}
                   onExport={openPivotExport}
                 />
               )}
