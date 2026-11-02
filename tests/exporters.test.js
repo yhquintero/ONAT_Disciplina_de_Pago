@@ -34,6 +34,7 @@ test('crea XLSX con los encabezados, primera columna en negrita y página ajusta
   const sheet = workbook.getWorksheet('Seguimiento');
   assert.deepEqual(sheet.getRow(1).values.slice(1), headers);
   assert.equal(sheet.getCell('A2').font.bold, true);
+  assert.equal(sheet.getColumn(4).numFmt, '[$$-409] #,##0.00');
   assert.ok(sheet.getColumn(1).width >= '10000000100- Alfa S.R.L.'.length);
   assert.equal(sheet.pageSetup.paperSize, 1);
   assert.equal(sheet.pageSetup.orientation, 'landscape');

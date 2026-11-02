@@ -305,6 +305,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .pivot-card-foot svg { color: #7d9eaa; }
 .charts-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 25px 1px 12px; }
 .charts-section-heading h3 { margin: 4px 0 0; color: #273b4d; font-family: Manrope, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: -.025em; }
+.chart-export-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .export-button { min-height: 33px; font-size: 9px; }
 .charts-secondary-grid { grid-template-columns: minmax(0, 1.15fr) minmax(310px, .85fr); }
 .payment-month-area { height: 225px; }
@@ -380,6 +381,10 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .import-file-meta svg { flex: 0 0 auto; color: #85a1ad; }
 .import-file-meta > span { overflow: hidden; max-width: 260px; color: #587285; text-overflow: ellipsis; white-space: nowrap; }
 .import-file-meta small { color: #9aa6af; white-space: nowrap; }
+.import-detected-fields { margin-top: 7px; }
+.import-detected-fields > strong { color: #8396a2; font-size: 7px; font-weight: 700; }
+.import-detected-field-list { display: flex; flex-wrap: wrap; gap: 4px; max-height: 38px; overflow: auto; margin-top: 4px; }
+.import-detected-field-list span { padding: 2px 5px; border: 1px solid #e5edf0; border-radius: 10px; color: #617b8b; background: #fff; font-size: 7px; line-height: 1.25; }
 .import-card-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 105px; min-height: 33px; padding: 0 10px; border: 1px solid #d8e5eb; border-radius: 7px; color: #527185; background: #fff; font-size: 9px; font-weight: 700; transition: .15s ease; }
 .import-card-button:hover { border-color: #a6c9ce; color: #28798c; background: #f4fbfb; }
 .import-card-button.replace-button { min-width: 93px; }

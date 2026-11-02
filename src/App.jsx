@@ -48,20 +48,20 @@ import {
   buildDashboardModel,
   buildPivot,
   formatDate,
+  getPaymentsForPeriod,
   monthLabel,
   uniqueTaxOptions,
 } from './analytics.js';
 import { normalizeText, parseWorkbook } from './data.js';
+import { formatCompactMoney, formatMoney } from './formatting.js';
 import { createFilename, createPdfBlob, createXlsxBlob } from './exporters.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
 
-const numberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 const integerFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 });
-const compactFormat = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 });
 
-const money = (value) => `${numberFormat.format(Number(value) || 0)} $`;
-const compactMoney = (value) => `${compactFormat.format(Number(value) || 0)} $`;
+const money = formatMoney;
+const compactMoney = formatCompactMoney;
 const countLabel = (value) => integerFormat.format(Number(value) || 0);
 
 const navItems = [
@@ -923,7 +923,7 @@ function PivotExplorer({
   );
 }
 
-function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotConfig, chartRef, onExport }) {
+function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotConfig, chartRef, onExport, onExportPayments }) {
   const { dimension, metric, scope, rosterOnly, chartType, limit } = pivotConfig;
   const change = (key, value) => setPivotConfig((previous) => ({ ...previous, [key]: value }));
   return (
@@ -956,7 +956,10 @@ function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotC
       />
       <div className="charts-section-heading">
         <div><span className="card-eyebrow">RESUMEN DEL PERÍODO</span><h3>{period ? monthLabel(period) : 'Sin período seleccionado'}</h3></div>
-        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar datos</button>
+        <div className="chart-export-actions">
+          <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar gráfico</button>
+          <button type="button" className="secondary-button export-button" onClick={onExportPayments}><FileSpreadsheet size={15} /> Exportar pagos</button>
+        </div>
       </div>
       <div className="content-grid chart-grid-summary charts-secondary-grid">
         <section className="surface-card chart-card">
@@ -1104,11 +1107,21 @@ function ImportCard({ role, meta, busy, onSelect }) {
         </div>
         <p>{isClients ? 'Listado con todos los contribuyentes que deben ser revisados.' : 'Transacciones con Contribuyente, Importe ($) y Fecha de pago.'}</p>
         {meta ? (
-          <div className="import-file-meta">
-            <FileText size={15} />
-            <span title={meta.fileName}>{meta.fileName}</span>
-            <small>{countLabel(meta.count)} filas · {fileSize(meta.size)}</small>
-          </div>
+          <>
+            <div className="import-file-meta">
+              <FileText size={15} />
+              <span title={meta.fileName}>{meta.fileName}</span>
+              <small>{countLabel(meta.count)} filas · {fileSize(meta.size)}</small>
+            </div>
+            {meta.fields?.length > 0 && (
+              <div className="import-detected-fields" aria-label="Columnas extraídas del archivo">
+                <strong>Datos detectados</strong>
+                <div className="import-detected-field-list">
+                  {meta.fields.map((field, index) => <span key={`${field}-${index}`}>{field}</span>)}
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="import-card-hint">Arrastra un archivo aquí o selecciónalo</div>
         )}
@@ -1145,7 +1158,7 @@ function ImportModal({ open, onClose, onImport, data, busyRole, lastImport }) {
         {lastImport && <div className="import-result"><CheckCircle2 size={16} /><span>{lastImport}</span></div>}
         <div className="import-guidance">
           <div className="guidance-icon"><Info size={16} /></div>
-          <p><strong>Archivos compatibles: .xls y .xlsx.</strong> El cruce se realiza por el código de Contribuyente (antes del guion) y, si falta, por el nombre. Si tu Excel de pagos no tiene “Período”, se usará el mes de “Fecha de pago”.</p>
+          <p><strong>Archivos compatibles: .xls, .xlsx, .xlsm y .xlsb.</strong> Se detectan y conservan las columnas originales para exportación; los campos adicionales de pagos también se pueden usar en gráficos. El cruce prioriza el código de Contribuyente (antes del guion); si falta, usa el nombre. Sin “Período”, se toma el mes de “Fecha de pago”.</p>
         </div>
         <div className="modal-privacy"><LockKeyhole size={14} /> Los libros se leen en este navegador y no se envían a un servidor.</div>
         <div className="modal-footer"><span>Las preferencias de vencimiento sí se guardan en este dispositivo.</span><button type="button" className="secondary-button" onClick={onClose}>Listo</button></div>
@@ -1185,7 +1198,7 @@ function ExportModal({ open, onClose, onExport, payload, busy }) {
     { key: 'xlsx', title: 'Excel (.xlsx)', detail: 'Editable y preparado para impresión', icon: FileSpreadsheet },
     { key: 'pdf', title: 'PDF', detail: payload.chartImage ? 'Incluye el gráfico y su tabla de datos' : 'Documento paginado para compartir o imprimir', icon: FileText },
     { key: 'csv', title: 'CSV', detail: 'Datos simples para otros sistemas', icon: FileOutput },
-  ];
+  ].filter((item) => !payload.formats || payload.formats.includes(item.key));
   const extension = format === 'xlsx' ? '.xlsx' : format === 'pdf' ? '.pdf' : '.csv';
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -1196,6 +1209,7 @@ function ExportModal({ open, onClose, onExport, payload, busy }) {
           <button type="button" className="icon-button modal-close" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <p className="modal-intro">Se exportarán <strong>{countLabel(payload.rows.length)} filas</strong> de “{payload.title}”{payload.subtitle ? ` · ${payload.subtitle}` : ''}.</p>
+        {payload.note && <div className="export-format-note"><Info size={14} /> {payload.note}</div>}
         <div className="export-format-grid" role="radiogroup" aria-label="Formato de exportación">
           {formats.map(({ key, title: formatTitle, detail, icon: Icon }) => (
             <button
@@ -1214,7 +1228,7 @@ function ExportModal({ open, onClose, onExport, payload, busy }) {
         </div>
         {format !== 'csv' && (
           <div className="export-page-settings">
-            <div className="export-settings-heading"><Printer size={16} /><strong>Configuración de página</strong><span>Se aplica al Excel y al PDF</span></div>
+            <div className="export-settings-heading"><Printer size={16} /><strong>Configuración de página</strong><span>{!payload.formats || payload.formats.includes('pdf') ? 'Se aplica al Excel y al PDF' : 'Se aplica al Excel'}</span></div>
             <div className="export-settings-grid">
               <label className="export-control">
                 <span>Tamaño de papel</span>
@@ -1316,7 +1330,7 @@ function SettingsModal({ open, onClose, workingDays, holidays, onSave }) {
 }
 
 function App() {
-  const [data, setData] = useState({ clients: [], payments: [], dimensions: [], clientMeta: null, paymentMeta: null });
+  const [data, setData] = useState({ clients: [], payments: [], dimensions: [], clientFields: [], paymentFields: [], clientMeta: null, paymentMeta: null });
   const [loadingSample, setLoadingSample] = useState(true);
   const [sampleError, setSampleError] = useState('');
   const [period, setPeriod] = useState('');
@@ -1366,8 +1380,10 @@ function App() {
           clients: clientsResult.clients,
           payments: paymentsResult.payments,
           dimensions: paymentsResult.dimensions,
-          clientMeta: { fileName: clientsResult.fileName, count: clientsResult.clients.length, size: clientsBuffer.byteLength, sample: true },
-          paymentMeta: { fileName: paymentsResult.fileName, count: paymentsResult.payments.length, size: paymentsBuffer.byteLength, sample: true, skippedRows: paymentsResult.skippedRows },
+          clientFields: clientsResult.fields,
+          paymentFields: paymentsResult.fields,
+          clientMeta: { fileName: clientsResult.fileName, count: clientsResult.clients.length, size: clientsBuffer.byteLength, sample: true, fields: clientsResult.fields.map((field) => field.label) },
+          paymentMeta: { fileName: paymentsResult.fileName, count: paymentsResult.payments.length, size: paymentsBuffer.byteLength, sample: true, skippedRows: paymentsResult.skippedRows, fields: paymentsResult.fields.map((field) => field.label) },
         });
       } catch (error) {
         if (!cancelled) setSampleError(error.message || 'No se pudieron cargar los Excel de muestra.');
@@ -1464,14 +1480,16 @@ function App() {
         setData((previous) => ({
           ...previous,
           clients: parsed.clients,
-          clientMeta: { fileName: file.name, count: parsed.clients.length, size: file.size, skippedRows: parsed.skippedRows },
+          clientFields: parsed.fields,
+          clientMeta: { fileName: file.name, count: parsed.clients.length, size: file.size, skippedRows: parsed.skippedRows, fields: parsed.fields.map((field) => field.label) },
         }));
       } else {
         setData((previous) => ({
           ...previous,
           payments: parsed.payments,
           dimensions: parsed.dimensions,
-          paymentMeta: { fileName: file.name, count: parsed.payments.length, size: file.size, skippedRows: parsed.skippedRows },
+          paymentFields: parsed.fields,
+          paymentMeta: { fileName: file.name, count: parsed.payments.length, size: file.size, skippedRows: parsed.skippedRows, fields: parsed.fields.map((field) => field.label) },
         }));
       }
       const roleName = role === 'clients' ? 'Patrón' : 'registro de pagos';
@@ -1479,7 +1497,8 @@ function App() {
       const dateNote = role === 'payments' && parsed.payments.every((payment) => payment.dateBasis === 'payment')
         ? ' El período se tomará de Fecha de pago.'
         : '';
-      setLastImport(`${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas cargadas en el ${roleName}.${skipped}${dateNote}`);
+      const fieldsNote = parsed.fields?.length ? ` Se detectaron ${countLabel(parsed.fields.length)} columnas y se conservaron para consulta y exportación.` : '';
+      setLastImport(`${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas cargadas en el ${roleName}.${skipped}${dateNote}${fieldsNote}`);
       setToast({ type: 'success', message: `${role === 'clients' ? 'Patrón' : 'Pagos'} importados: ${countLabel(role === 'clients' ? parsed.clients.length : parsed.payments.length)} filas.` });
     } catch (error) {
       setToast({ type: 'error', message: error.message || 'No se pudo leer el archivo.' });
@@ -1495,7 +1514,10 @@ function App() {
   };
 
   const makeClientExport = (rows, title = 'Seguimiento de pagos') => {
-    const headings = ['Contribuyente', 'Tributo', 'Estado', 'Importe cobrado ($)', 'Cantidad de pagos', 'Primer pago', 'Último pago', 'Días de atraso'];
+    const standardHeaders = ['Contribuyente', 'Tributo', 'Estado', 'Importe cobrado ($)', 'Cantidad de pagos', 'Primer pago', 'Último pago', 'Días de atraso'];
+    const extraFields = data.clientFields.filter((field) => !['contribuyente', 'tributo'].includes(field.key));
+    const provenanceHeaders = ['Fila de origen (Patrón)', 'Hoja de origen (Patrón)'];
+    const headings = [...standardHeaders, ...provenanceHeaders, ...extraFields.map((field) => field.label)];
     const taxLabel = taxFilter ? (taxOptions.find((option) => option.key === taxFilter)?.label || taxFilter) : 'Todos los tributos';
     const subtitle = `Período: ${period ? monthLabel(period) : 'todos'} · Tributo: ${taxLabel} · Regla: ${workingDays} días hábiles`;
     const exportRows = rows.map((row) => [
@@ -1507,6 +1529,9 @@ function App() {
       row.firstPayment || null,
       row.lastPayment || null,
       Number(row.lateDays) || 0,
+      row.sourceRow ?? '',
+      row.sourceSheet || '',
+      ...extraFields.map((field) => row.sourceData?.[field.key] ?? ''),
     ]);
     return { title, fileBase: 'seguimiento', period, subtitle, headers: headings, rows: exportRows };
   };
@@ -1517,6 +1542,52 @@ function App() {
       return;
     }
     setExportPayload(makeClientExport(rows, title));
+    setExportOpen(true);
+  };
+
+  const openPaymentExport = () => {
+    const selectedPeriod = pivotConfig.scope === 'selected' && period ? period : '';
+    const periodsToExport = selectedPeriod
+      ? [selectedPeriod]
+      : Array.from(new Set(data.payments.map((payment) => payment.periodKey).filter(Boolean))).sort();
+    const paymentRows = periodsToExport.flatMap((periodKey) => getPaymentsForPeriod({
+      payments: data.payments,
+      clients: data.clients,
+      period: periodKey,
+      taxFilter,
+      rosterOnly: pivotConfig.rosterOnly,
+    }));
+    if (!paymentRows.length) {
+      setToast({ type: 'error', message: 'No hay movimientos para exportar con estos filtros.' });
+      return;
+    }
+
+    const sourceFields = data.paymentFields;
+    const headers = [
+      ...sourceFields.map((field) => field.label),
+      'Período analizado',
+      'Base del período',
+      'Fila de origen',
+      'Hoja de origen',
+    ];
+    const rows = paymentRows.map((payment) => [
+      ...sourceFields.map((field) => payment.sourceData?.[field.key] ?? ''),
+      payment.periodKey,
+      payment.dateBasis === 'period' ? 'Columna Período' : 'Fecha de pago',
+      payment.sourceRow,
+      payment.sheetName,
+    ]);
+    const taxLabel = taxFilter ? (taxOptions.find((option) => option.key === taxFilter)?.label || taxFilter) : 'Todos los tributos';
+    setExportPayload({
+      title: 'Movimientos de pago',
+      fileBase: 'movimientos-de-pago',
+      period: selectedPeriod,
+      subtitle: `${selectedPeriod ? monthLabel(selectedPeriod) : 'Todos los períodos'} · ${taxLabel} · ${countLabel(paymentRows.length)} movimientos`,
+      headers,
+      rows,
+      formats: ['xlsx', 'csv'],
+      note: 'Se incluyen las columnas originales del Excel, el período usado para el análisis y la fila/hoja de origen. Para este volumen se ofrecen XLSX y CSV.',
+    });
     setExportOpen(true);
   };
 
@@ -1534,7 +1605,7 @@ function App() {
       period,
       subtitle: `${dimensionLabel} · ${metricLabel} · ${pivotConfig.scope === 'all' ? 'todos los períodos' : monthLabel(period)}`,
       chartImage: pivotChartRef.current?.toBase64Image?.() || null,
-      headers: ['Agrupación', 'Valor', 'Métrica'],
+      headers: ['Agrupación', pivotConfig.metric === 'amount' ? 'Importe ($)' : 'Valor', 'Métrica'],
       rows,
     });
     setExportOpen(true);
@@ -1641,6 +1712,7 @@ function App() {
                   setPivotConfig={setPivotConfig}
                   chartRef={pivotChartRef}
                   onExport={openPivotExport}
+                  onExportPayments={openPaymentExport}
                 />
               )}
 

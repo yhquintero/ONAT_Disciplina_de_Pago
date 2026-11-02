@@ -69,26 +69,33 @@ El valor inicial es **los primeros 10 días hábiles de cada mes**. En **Regla**
 - Indicadores de importe recaudado, contribuyentes con pago, pagos tardíos y clientes sin pago registrado.
 - Gráficos de evolución por período, puntualidad y ranking de contribuyentes.
 - Explorador dinámico: agrupa por período, fecha de pago, contribuyente, tributo y otras columnas detectadas; muestra suma de importe, número de pagos o contribuyentes únicos. Permite gráficos de barras, líneas, área y dona, además de limitar el número de grupos visibles.
-- Exportación a `.xlsx`, PDF y CSV. Los reportes de seguimiento incluyen Contribuyente, Tributo, Estado, Importe cobrado ($), Cantidad de pagos, Primer pago, Último pago y Días de atraso. Excel aplica negrita a la primera columna, ajusta anchos automáticamente y configura la impresión; PDF y Excel admiten A4, Carta, A3, Legal y A5, en orientación horizontal o vertical. Al exportar el explorador dinámico a PDF, se incluyen el gráfico visible y su tabla de datos.
+- Los importes se presentan con el símbolo al inicio y el formato solicitado, por ejemplo **`$ 1,000,000.00`**. Los importes de Excel y PDF siguen la misma convención.
+- La importación conserva los campos originales de ambos libros, incluidos atributos adicionales como DPA, forma organizativa, organismo de dirección, configuración/periodicidad, valor del tributo, período inicial y fecha de alta. El modal muestra las columnas detectadas; las exportaciones de seguimiento incluyen atributos del Patrón y los movimientos pueden exportarse con sus columnas originales, período analizado y fila/hoja de origen. `Valor tributo` se conserva tal como viene en Excel, pero no se interpreta como deuda ni se suma al importe cobrado.
+- Exportación a `.xlsx`, PDF y CSV. Excel aplica negrita a la primera columna, ajusta anchos automáticamente y configura la impresión; PDF y Excel admiten A4, Carta, A3, Legal y A5, en orientación horizontal o vertical. El PDF del explorador incluye el gráfico visible y su tabla. Los movimientos detallados se ofrecen en XLSX y CSV para evitar informes PDF excesivamente voluminosos.
 - Filtros de período y tributo, búsqueda por contribuyente y preferencias de vencimiento/feriados guardadas localmente. Los libros importados viven en memoria hasta recargar o cerrar la pestaña.
 
 ## Ideas para mejoras futuras (por etapas)
 
 Estas propuestas no se activan automáticamente; se pueden abordar una por una según prioridad:
 
-1. **Validación de importación:** detectar duplicados, filas incompletas, identificadores ambiguos y pagos con fechas fuera del período, con un informe descargable antes de analizar.
-2. **Revisión de casos:** permitir anotar una observación por contribuyente/pago y marcar filas revisadas, sin cambiar los datos originales.
-3. **Comparación temporal:** comparar meses o años y mostrar variaciones de importe, puntualidad y contribuyentes pendientes.
-4. **Trazabilidad del cálculo:** explicar por fila el vencimiento aplicado, los días de atraso y las transacciones que originaron el estado.
-5. **Uso compartido opcional:** si se necesita colaboración, evaluar primero perfiles, permisos y copias de respaldo; los datos fiscales requerirían un backend protegido y no deberían publicarse en GitHub Pages.
+1. **Validación de importación:** detectar duplicados, filas incompletas, identificadores ambiguos, fechas inválidas y períodos sospechosos; ofrecer una vista previa y un informe descargable antes de analizar.
+2. **Mapeo de columnas:** guardar equivalencias configurables para encabezados distintos, seleccionar la hoja y decidir qué campos ignorar o incluir en cada libro.
+3. **Conciliación de contribuyentes:** mostrar coincidencias exactas, posibles duplicados y pagos sin correspondencia con el Patrón antes de aplicar el cruce.
+4. **Análisis de atributos del Patrón:** filtrar y comparar por configuración/periodicidad, valor del tributo, antigüedad y futuros campos extraídos.
+5. **Comparación temporal:** comparar meses o años y mostrar variaciones de importe, puntualidad y contribuyentes pendientes.
+6. **Trazabilidad del cálculo:** explicar por fila el vencimiento aplicado, los días de atraso y las transacciones que originaron el estado, usando la fila y hoja de origen ya conservadas.
+7. **Revisión de casos y respaldo local:** añadir notas y estado de revisión por contribuyente, con exportación/importación de una copia de trabajo cifrada o descargable.
+8. **Accesibilidad y rendimiento:** atajos de teclado, mejores ayudas de lectura, paginación de tablas grandes y métricas para medir la velocidad de importación.
+9. **Uso compartido opcional:** si se necesita colaboración, evaluar perfiles, permisos y copias de respaldo; los datos fiscales requerirían un backend protegido y no deberían publicarse en GitHub Pages.
 
-Como siguiente mejora recomendada, empezar por la **validación de importación**: reduce errores antes de que afecten al análisis y mantiene intacto el procesamiento local.
+Como siguiente mejora recomendada, empezar por **validación y conciliación de importación**: revisar duplicados, campos vacíos y pagos sin correspondencia antes de que afecten al análisis, manteniendo el procesamiento local.
 
 ## Arquitectura
 
 - `src/data.js`: lectura de Excel y normalización de encabezados, importada bajo demanda.
 - `src/analytics.js`: cálculo de vencimientos, cruce y métricas.
 - `src/exporters.js`: creación local de libros `.xlsx` y PDF con formato de impresión.
-- `src/App.jsx` / `src/styles.css`: interfaz y gráficos.
-- `tests/core.test.js` y `tests/exporters.test.js`: pruebas de fechas, clasificación, pivotes, libros de muestra y exportaciones.
+- `src/formatting.js`: formato monetario común para la interfaz y reportes.
+- `src/App.jsx` / `src/styles.css`: interfaz, importación, exportaciones y gráficos.
+- `tests/core.test.js`, `tests/exporters.test.js` y `tests/formatting.test.js`: pruebas de lectura de libros, extracción de columnas, fechas, métricas, exportaciones y formato monetario.
 - `.github/workflows/ci.yml` y `pages.yml`: verificación y publicación.
