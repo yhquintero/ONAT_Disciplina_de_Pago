@@ -73,8 +73,10 @@ $script:StatusText = $null
 $script:NodeBadge = $null
 $script:NpmBadge = $null
 $script:RepoPathLabel = $null
+$script:PathToolTip = $null
 $script:StopServersButton = $null
 $script:PrivacyCard = $null
+$script:PrivacyTextLabel = $null
 $script:TaskButtons = @()
 $script:TaskWorker = $null
 $script:ServerProcesses = @{}
@@ -443,10 +445,13 @@ function New-ActionButton {
 
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $Action.Text
-    $button.Width = $Width
-    $button.Height = 30
-    $button.Margin = [System.Windows.Forms.Padding]::new(0, 0, 8, 0)
-    $button.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
+    $button.AutoSize = $true
+    $button.MinimumSize = [System.Drawing.Size]::new($Width, 38)
+    $button.Padding = [System.Windows.Forms.Padding]::new(10, 5, 10, 5)
+    $button.Margin = [System.Windows.Forms.Padding]::new(0, 0, 8, 5)
+    $button.Font = [System.Drawing.Font]::new('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+    $button.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $button.UseMnemonic = $false
     $button.Cursor = [System.Windows.Forms.Cursors]::Hand
     $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $button.FlatAppearance.BorderSize = 1
@@ -492,32 +497,66 @@ function New-ActionCard {
 
     $card = New-Object System.Windows.Forms.Panel
     $card.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $card.Margin = [System.Windows.Forms.Padding]::new(0, 0, 10, 8)
+    $card.AutoSize = $true
+    $card.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $card.MinimumSize = [System.Drawing.Size]::new(290, 116)
+    $card.Margin = [System.Windows.Forms.Padding]::new(0, 0, 10, 10)
     $card.Padding = [System.Windows.Forms.Padding]::new(12)
     $card.BackColor = $script:Palette.White
     $card.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 
-    $titleLabel = New-UiLabel -Text $Title -FontSize 9.5 -Bold $true -ForeColor $script:Palette.Ink
-    $titleLabel.Location = [System.Drawing.Point]::new(12, 8)
-    $descriptionLabel = New-UiLabel -Text $Description -FontSize 8 -ForeColor $script:Palette.Muted -AutoSize $false
-    $descriptionLabel.Dock = [System.Windows.Forms.DockStyle]::Top
-    $descriptionLabel.Height = 22
-    $descriptionLabel.Margin = [System.Windows.Forms.Padding]::new(12, 30, 12, 0)
-    $descriptionLabel.AutoEllipsis = $true
+    $cardLayout = New-Object System.Windows.Forms.TableLayoutPanel
+    $cardLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $cardLayout.AutoSize = $true
+    $cardLayout.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $cardLayout.ColumnCount = 1
+    $cardLayout.RowCount = 3
+    $cardLayout.Margin = [System.Windows.Forms.Padding]::Empty
+    $cardLayout.Padding = [System.Windows.Forms.Padding]::Empty
+    $cardLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $cardLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $cardLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $cardLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+
+    $titleLabel = New-UiLabel -Text $Title -FontSize 10.5 -Bold $true -ForeColor $script:Palette.Ink -AutoSize $false
+    $titleLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $titleLabel.Height = 25
+    $titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    $titleLabel.UseMnemonic = $false
+
+    $descriptionLabel = New-UiLabel -Text $Description -FontSize 9 -ForeColor $script:Palette.Muted -AutoSize $true
+    $descriptionLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $descriptionLabel.Margin = [System.Windows.Forms.Padding]::new(0, 1, 0, 5)
+    $descriptionLabel.MaximumSize = [System.Drawing.Size]::new(540, 0)
+    $descriptionLabel.TextAlign = [System.Drawing.ContentAlignment]::TopLeft
+    $descriptionLabel.AutoEllipsis = $false
+    $descriptionLabel.UseMnemonic = $false
 
     $buttonRow = New-Object System.Windows.Forms.FlowLayoutPanel
-    $buttonRow.Dock = [System.Windows.Forms.DockStyle]::Bottom
-    $buttonRow.Height = 36
-    $buttonRow.WrapContents = $false
+    $buttonRow.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $buttonRow.AutoSize = $true
+    $buttonRow.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $buttonRow.MinimumSize = [System.Drawing.Size]::new(0, 40)
+    $buttonRow.WrapContents = $true
     $buttonRow.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
-    $buttonRow.Padding = [System.Windows.Forms.Padding]::new(0, 3, 0, 0)
+    $buttonRow.Padding = [System.Windows.Forms.Padding]::Empty
+    $buttonRow.Margin = [System.Windows.Forms.Padding]::Empty
     $buttonRow.BackColor = [System.Drawing.Color]::Transparent
     $buttonRow.Controls.Add((New-ActionButton -Action $PrimaryAction -Primary $true -Width $PrimaryWidth))
     $buttonRow.Controls.Add((New-ActionButton -Action $SecondaryAction -Width $SecondaryWidth))
 
-    $card.Controls.Add($buttonRow)
-    $card.Controls.Add($descriptionLabel)
-    $card.Controls.Add($titleLabel)
+    $cardLayout.Controls.Add($titleLabel, 0, 0)
+    $cardLayout.Controls.Add($descriptionLabel, 0, 1)
+    $cardLayout.Controls.Add($buttonRow, 0, 2)
+    $card.Controls.Add($cardLayout)
+    $card.Tag = [pscustomobject]@{ Description = $descriptionLabel }
+    $card.add_SizeChanged({
+        param($sender, $eventArgs)
+        if ($sender.Tag -and $sender.Tag.Description) {
+            $availableWidth = [Math]::Max(180, $sender.ClientSize.Width - $sender.Padding.Horizontal - 4)
+            $sender.Tag.Description.MaximumSize = [System.Drawing.Size]::new($availableWidth, 0)
+        }
+    })
     return $card
 }
 
@@ -528,19 +567,20 @@ function Show-ImprovementDialog {
     $dialog.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
     $dialog.MinimizeBox = $false
     $dialog.MaximizeBox = $false
-    $dialog.ClientSize = [System.Drawing.Size]::new(720, 590)
-    $dialog.MinimumSize = [System.Drawing.Size]::new(620, 460)
+    $dialog.ClientSize = [System.Drawing.Size]::new(820, 680)
+    $dialog.MinimumSize = [System.Drawing.Size]::new(680, 520)
+    $dialog.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
     $dialog.BackColor = $script:Palette.Canvas
-    $dialog.Font = [System.Drawing.Font]::new('Segoe UI', 9)
+    $dialog.Font = [System.Drawing.Font]::new('Segoe UI', 9.5)
 
     $header = New-Object System.Windows.Forms.Panel
     $header.Dock = [System.Windows.Forms.DockStyle]::Top
-    $header.Height = 82
+    $header.Height = 96
     $header.Padding = [System.Windows.Forms.Padding]::new(22, 16, 20, 8)
     $header.BackColor = $script:Palette.White
-    $heading = New-UiLabel -Text 'Mejoras propuestas' -FontSize 16 -Bold $true -ForeColor $script:Palette.Ink
+    $heading = New-UiLabel -Text 'Mejoras propuestas' -FontSize 17 -Bold $true -ForeColor $script:Palette.Ink
     $heading.Location = [System.Drawing.Point]::new(22, 13)
-    $subheading = New-UiLabel -Text 'Ideas para evolucionar la Web gradualmente, manteniendo el procesamiento local.' -FontSize 8.5 -ForeColor $script:Palette.Muted
+    $subheading = New-UiLabel -Text 'Ideas para evolucionar la Web gradualmente, manteniendo el procesamiento local.' -FontSize 9.5 -ForeColor $script:Palette.Muted
     $subheading.Location = [System.Drawing.Point]::new(23, 46)
     $header.Controls.Add($heading)
     $header.Controls.Add($subheading)
@@ -552,30 +592,44 @@ function Show-ImprovementDialog {
     $list.FlowDirection = [System.Windows.Forms.FlowDirection]::TopDown
     $list.Padding = [System.Windows.Forms.Padding]::new(15, 14, 15, 12)
     $list.BackColor = $script:Palette.Canvas
+    $list.add_SizeChanged({
+        param($sender, $eventArgs)
+        $availableWidth = [Math]::Max(500, $sender.ClientSize.Width - $sender.Padding.Horizontal - 24)
+        foreach ($itemPanel in $sender.Controls) {
+            $itemPanel.Width = $availableWidth
+            $ideaText = $itemPanel.Controls['IdeaText']
+            if ($ideaText) {
+                $ideaText.Width = [Math]::Max(360, $itemPanel.ClientSize.Width - 72)
+            }
+        }
+    })
 
     $number = 0
     foreach ($idea in $script:ImprovementIdeas) {
         $number += 1
         $item = New-Object System.Windows.Forms.Panel
         $item.Width = 660
-        $item.Height = 59
-        $item.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
+        $item.Height = 78
+        $item.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 9)
         $item.BackColor = $script:Palette.White
         $item.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 
         $numberBadge = New-Object System.Windows.Forms.Label
         $numberBadge.Text = '{0:D2}' -f $number
-        $numberBadge.Location = [System.Drawing.Point]::new(12, 13)
-        $numberBadge.Size = [System.Drawing.Size]::new(34, 30)
+        $numberBadge.Location = [System.Drawing.Point]::new(12, 19)
+        $numberBadge.Size = [System.Drawing.Size]::new(36, 36)
         $numberBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
         $numberBadge.BackColor = [System.Drawing.Color]::FromArgb(235, 245, 244)
         $numberBadge.ForeColor = $script:Palette.Teal
-        $numberBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
+        $numberBadge.Font = [System.Drawing.Font]::new('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
 
-        $ideaLabel = New-UiLabel -Text $idea -FontSize 8.5 -ForeColor $script:Palette.Ink -AutoSize $false
-        $ideaLabel.Location = [System.Drawing.Point]::new(57, 9)
-        $ideaLabel.Size = [System.Drawing.Size]::new(585, 40)
+        $ideaLabel = New-UiLabel -Text $idea -FontSize 9.5 -ForeColor $script:Palette.Ink -AutoSize $false
+        $ideaLabel.Name = 'IdeaText'
+        $ideaLabel.Location = [System.Drawing.Point]::new(60, 8)
+        $ideaLabel.Size = [System.Drawing.Size]::new(585, 62)
         $ideaLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+        $ideaLabel.AutoEllipsis = $false
+        $ideaLabel.UseMnemonic = $false
         $item.Controls.Add($numberBadge)
         $item.Controls.Add($ideaLabel)
         $list.Controls.Add($item)
@@ -648,13 +702,17 @@ function Initialize-ControlPanel {
     $form = New-Object System.Windows.Forms.Form
     $form.Text = 'ONAT · Disciplina de pago | Panel de control'
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $form.ClientSize = [System.Drawing.Size]::new(1160, 800)
-    $form.MinimumSize = [System.Drawing.Size]::new(980, 690)
+    $workArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+    $initialWidth = [int][Math]::Min(1440, [Math]::Max(980, $workArea.Width - 48))
+    $initialHeight = [int][Math]::Min(920, [Math]::Max(680, $workArea.Height - 60))
+    $form.ClientSize = [System.Drawing.Size]::new($initialWidth, $initialHeight)
+    $form.MinimumSize = [System.Drawing.Size]::new(960, 640)
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
     $form.BackColor = $script:Palette.Canvas
     $form.Font = [System.Drawing.Font]::new('Segoe UI', 9)
     $form.MaximizeBox = $true
     $form.MinimizeBox = $true
+    $form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
     $script:Form = $form
 
     $outerLayout = New-Object System.Windows.Forms.TableLayoutPanel
@@ -681,14 +739,14 @@ function Initialize-ControlPanel {
     $logoTile.Controls.Add($logoLabel)
     $brandLabel = New-UiLabel -Text 'ONAT' -FontSize 19 -Bold $true -ForeColor $script:Palette.White
     $brandLabel.Location = [System.Drawing.Point]::new(76, 24)
-    $brandCaption = New-UiLabel -Text 'CONTROL DE PAGO' -FontSize 7 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(133, 166, 181))
+    $brandCaption = New-UiLabel -Text 'CONTROL DE PAGO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(133, 166, 181))
     $brandCaption.Location = [System.Drawing.Point]::new(78, 49)
 
     $sidebarRule = New-Object System.Windows.Forms.Panel
     $sidebarRule.Location = [System.Drawing.Point]::new(18, 94)
     $sidebarRule.Size = [System.Drawing.Size]::new(200, 1)
     $sidebarRule.BackColor = [System.Drawing.Color]::FromArgb(48, 74, 91)
-    $sideSection = New-UiLabel -Text 'ESPACIO DE TRABAJO' -FontSize 7 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
+    $sideSection = New-UiLabel -Text 'ESPACIO DE TRABAJO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
     $sideSection.Location = [System.Drawing.Point]::new(22, 119)
 
     $activeNav = New-Object System.Windows.Forms.Panel
@@ -704,12 +762,13 @@ function Initialize-ControlPanel {
     $activeNav.Controls.Add($navMarker)
     $activeNav.Controls.Add($navLabel)
 
-    $accessLabel = New-UiLabel -Text 'ACCIONES' -FontSize 7 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
+    $accessLabel = New-UiLabel -Text 'ACCIONES' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
     $accessLabel.Location = [System.Drawing.Point]::new(22, 212)
     $openFolderAction = @{ Type = 'folder'; Text = 'Abrir carpeta del proyecto' }
     $folderButton = New-ActionButton -Action $openFolderAction -Width 194
+    $folderButton.AutoSize = $false
     $folderButton.Location = [System.Drawing.Point]::new(16, 235)
-    $folderButton.Height = 35
+    $folderButton.Size = [System.Drawing.Size]::new(194, 38)
     $folderButton.BackColor = $script:Palette.Navy
     $folderButton.ForeColor = [System.Drawing.Color]::FromArgb(190, 208, 216)
     $folderButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(62, 92, 108)
@@ -719,8 +778,9 @@ function Initialize-ControlPanel {
     $folderButton.Margin = [System.Windows.Forms.Padding]::Empty
 
     $script:StopServersButton = New-ActionButton -Action @{ Type = 'stop'; Text = 'Detener servidores' } -Width 200
+    $script:StopServersButton.AutoSize = $false
     $script:StopServersButton.Location = [System.Drawing.Point]::new(18, 535)
-    $script:StopServersButton.Size = [System.Drawing.Size]::new(200, 36)
+    $script:StopServersButton.Size = [System.Drawing.Size]::new(200, 38)
     $script:StopServersButton.BackColor = [System.Drawing.Color]::FromArgb(39, 62, 77)
     $script:StopServersButton.ForeColor = [System.Drawing.Color]::FromArgb(218, 231, 236)
     $script:StopServersButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(66, 92, 106)
@@ -729,14 +789,17 @@ function Initialize-ControlPanel {
 
     $privacyCard = New-Object System.Windows.Forms.Panel
     $privacyCard.Location = [System.Drawing.Point]::new(17, 591)
-    $privacyCard.Size = [System.Drawing.Size]::new(202, 71)
+    $privacyCard.Size = [System.Drawing.Size]::new(202, 82)
     $privacyCard.BackColor = [System.Drawing.Color]::FromArgb(25, 57, 74)
     $script:PrivacyCard = $privacyCard
-    $privacyTitle = New-UiLabel -Text 'EJECUCIÓN LOCAL' -FontSize 7 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 204, 196))
-    $privacyTitle.Location = [System.Drawing.Point]::new(12, 11)
-    $privacyText = New-UiLabel -Text 'La Web procesa tus Excel en el navegador.' -FontSize 7.5 -ForeColor ([System.Drawing.Color]::FromArgb(179, 200, 208)) -AutoSize $false
-    $privacyText.Location = [System.Drawing.Point]::new(12, 31)
-    $privacyText.Size = [System.Drawing.Size]::new(178, 29)
+    $privacyTitle = New-UiLabel -Text 'EJECUCIÓN LOCAL' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 204, 196))
+    $privacyTitle.Location = [System.Drawing.Point]::new(12, 10)
+    $privacyText = New-UiLabel -Text 'La Web procesa tus Excel en el navegador.' -FontSize 8.5 -ForeColor ([System.Drawing.Color]::FromArgb(179, 200, 208)) -AutoSize $false
+    $privacyText.Location = [System.Drawing.Point]::new(12, 34)
+    $privacyText.Size = [System.Drawing.Size]::new(178, 40)
+    $script:PrivacyTextLabel = $privacyText
+    $privacyText.AutoEllipsis = $false
+    $privacyText.UseMnemonic = $false
     $privacyCard.Controls.Add($privacyTitle)
     $privacyCard.Controls.Add($privacyText)
 
@@ -755,12 +818,15 @@ function Initialize-ControlPanel {
         $width = $sender.ClientSize.Width
         $height = $sender.ClientSize.Height
         if ($script:StopServersButton) {
-            $script:StopServersButton.Location = [System.Drawing.Point]::new(18, [Math]::Max(250, $height - 140))
+            $script:StopServersButton.Location = [System.Drawing.Point]::new(18, [Math]::Max(250, $height - 152))
             $script:StopServersButton.Width = [Math]::Max(150, $width - 36)
         }
         if ($script:PrivacyCard) {
-            $script:PrivacyCard.Location = [System.Drawing.Point]::new(17, [Math]::Max(320, $height - 88))
+            $script:PrivacyCard.Location = [System.Drawing.Point]::new(17, [Math]::Max(320, $height - 94))
             $script:PrivacyCard.Width = [Math]::Max(150, $width - 34)
+        }
+        if ($script:PrivacyTextLabel) {
+            $script:PrivacyTextLabel.Width = [Math]::Max(125, $width - 58)
         }
     })
 
@@ -779,7 +845,7 @@ function Initialize-ControlPanel {
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 62)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 134)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 91)) | Out-Null
-    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 222)) | Out-Null
+    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 28)) | Out-Null
 
@@ -793,26 +859,27 @@ function Initialize-ControlPanel {
     $headerLayout.Margin = [System.Windows.Forms.Padding]::Empty
     $headerLayout.Padding = [System.Windows.Forms.Padding]::Empty
     $headerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $headerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 155)) | Out-Null
+    $headerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 190)) | Out-Null
     $headerContent = New-Object System.Windows.Forms.Panel
     $headerContent.Dock = [System.Windows.Forms.DockStyle]::Fill
     $pageTitle = New-UiLabel -Text 'Centro de control' -FontSize 20 -Bold $true -ForeColor $script:Palette.Ink
     $pageTitle.Location = [System.Drawing.Point]::new(0, 0)
-    $pageSubtitle = New-UiLabel -Text 'Herramientas locales para desarrollar, comprobar y abrir la aplicación.' -FontSize 8.5 -ForeColor $script:Palette.Muted -AutoSize $false
+    $pageSubtitle = New-UiLabel -Text 'Herramientas locales para desarrollar, comprobar y abrir la aplicación.' -FontSize 9.5 -ForeColor $script:Palette.Muted -AutoSize $false
     $pageSubtitle.Dock = [System.Windows.Forms.DockStyle]::Top
-    $pageSubtitle.Height = 22
+    $pageSubtitle.Height = 24
     $pageSubtitle.Margin = [System.Windows.Forms.Padding]::new(1, 33, 0, 0)
-    $pageSubtitle.AutoEllipsis = $true
+    $pageSubtitle.AutoEllipsis = $false
+    $pageSubtitle.UseMnemonic = $false
     $headerContent.Controls.Add($pageSubtitle)
     $headerContent.Controls.Add($pageTitle)
     $statusSlot = New-Object System.Windows.Forms.Panel
     $statusSlot.Dock = [System.Windows.Forms.DockStyle]::Fill
     $script:StatusBadge = New-Object System.Windows.Forms.Label
     $script:StatusBadge.Text = 'LISTO'
-    $script:StatusBadge.Size = [System.Drawing.Size]::new(145, 25)
-    $script:StatusBadge.Location = [System.Drawing.Point]::new(0, 9)
+    $script:StatusBadge.Size = [System.Drawing.Size]::new(180, 30)
+    $script:StatusBadge.Location = [System.Drawing.Point]::new(0, 8)
     $script:StatusBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $script:StatusBadge.Font = [System.Drawing.Font]::new('Segoe UI', 7, [System.Drawing.FontStyle]::Bold)
+    $script:StatusBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8, [System.Drawing.FontStyle]::Bold)
     $script:StatusBadge.BackColor = $script:Palette.GreenLight
     $script:StatusBadge.ForeColor = $script:Palette.Green
     $script:StatusBadge.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -826,20 +893,21 @@ function Initialize-ControlPanel {
     $hero.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
     $hero.Padding = [System.Windows.Forms.Padding]::new(20, 15, 20, 12)
     $hero.BackColor = $script:Palette.Navy
-    $heroLabel = New-UiLabel -Text 'ONAT  ·  ENTORNO DE DESARROLLO' -FontSize 7 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
+    $heroLabel = New-UiLabel -Text 'ONAT  ·  ENTORNO DE DESARROLLO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
     $heroLabel.Location = [System.Drawing.Point]::new(20, 13)
-    $heroTitle = New-UiLabel -Text 'Todo listo para poner el proyecto en marcha.' -FontSize 15 -Bold $true -ForeColor $script:Palette.White
+    $heroTitle = New-UiLabel -Text 'Todo listo para poner el proyecto en marcha.' -FontSize 16 -Bold $true -ForeColor $script:Palette.White
     $heroTitle.Location = [System.Drawing.Point]::new(20, 34)
-    $heroText = New-UiLabel -Text 'Inicia el sitio seguro, valida los cambios y consulta el resultado sin salir de este panel.' -FontSize 8.5 -ForeColor ([System.Drawing.Color]::FromArgb(188, 211, 218)) -AutoSize $false
+    $heroText = New-UiLabel -Text 'Inicia la Web local, valida los cambios y consulta los resultados sin salir del panel.' -FontSize 9.5 -ForeColor ([System.Drawing.Color]::FromArgb(188, 211, 218)) -AutoSize $false
     $heroText.Dock = [System.Windows.Forms.DockStyle]::Top
-    $heroText.Height = 25
+    $heroText.Height = 27
     $heroText.Margin = [System.Windows.Forms.Padding]::new(21, 66, 20, 0)
-    $heroText.AutoEllipsis = $true
+    $heroText.AutoEllipsis = $false
+    $heroText.UseMnemonic = $false
     $heroDecoration = New-Object System.Windows.Forms.Panel
     $heroDecoration.Size = [System.Drawing.Size]::new(7, 7)
     $heroDecoration.Location = [System.Drawing.Point]::new(20, 105)
     $heroDecoration.BackColor = [System.Drawing.Color]::FromArgb(105, 211, 175)
-    $heroCaption = New-UiLabel -Text 'LOCAL  ·  HTTPS  ·  SIN MODIFICAR LOS DATOS' -FontSize 6.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
+    $heroCaption = New-UiLabel -Text 'LOCAL  ·  HTTPS  ·  SIN MODIFICAR LOS DATOS' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
     $heroCaption.Location = [System.Drawing.Point]::new(35, 102)
     $hero.Controls.Add($heroLabel)
     $hero.Controls.Add($heroTitle)
@@ -852,23 +920,27 @@ function Initialize-ControlPanel {
     $environment.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
     $environment.BackColor = $script:Palette.White
     $environment.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-    $environmentTitle = New-UiLabel -Text 'ESTADO DEL ENTORNO' -FontSize 7 -Bold $true -ForeColor $script:Palette.Muted
+    $environmentTitle = New-UiLabel -Text 'ESTADO DEL ENTORNO' -FontSize 8 -Bold $true -ForeColor $script:Palette.Muted
     $environmentTitle.Location = [System.Drawing.Point]::new(13, 9)
     $script:NodeBadge = New-Object System.Windows.Forms.Label
     $script:NodeBadge.Location = [System.Drawing.Point]::new(172, 7)
-    $script:NodeBadge.Size = [System.Drawing.Size]::new(153, 24)
+    $script:NodeBadge.Size = [System.Drawing.Size]::new(178, 27)
     $script:NodeBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $script:NodeBadge.Font = [System.Drawing.Font]::new('Segoe UI', 7.5, [System.Drawing.FontStyle]::Bold)
+    $script:NodeBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
     $script:NpmBadge = New-Object System.Windows.Forms.Label
-    $script:NpmBadge.Location = [System.Drawing.Point]::new(333, 7)
-    $script:NpmBadge.Size = [System.Drawing.Size]::new(142, 24)
+    $script:NpmBadge.Location = [System.Drawing.Point]::new(359, 7)
+    $script:NpmBadge.Size = [System.Drawing.Size]::new(162, 27)
     $script:NpmBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $script:NpmBadge.Font = [System.Drawing.Font]::new('Segoe UI', 7.5, [System.Drawing.FontStyle]::Bold)
-    $script:RepoPathLabel = New-UiLabel -Text '' -FontSize 7 -Bold $false -ForeColor ([System.Drawing.Color]::FromArgb(129, 145, 157)) -AutoSize $false
+    $script:NpmBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
+    $script:RepoPathLabel = New-UiLabel -Text '' -FontSize 8.5 -Bold $false -ForeColor ([System.Drawing.Color]::FromArgb(129, 145, 157)) -AutoSize $false
     $script:RepoPathLabel.Dock = [System.Windows.Forms.DockStyle]::Top
-    $script:RepoPathLabel.Height = 22
+    $script:RepoPathLabel.Height = 25
     $script:RepoPathLabel.Margin = [System.Windows.Forms.Padding]::new(13, 42, 13, 0)
     $script:RepoPathLabel.AutoEllipsis = $true
+    $script:RepoPathLabel.UseMnemonic = $false
+    $script:PathToolTip = New-Object System.Windows.Forms.ToolTip
+    $script:PathToolTip.AutoPopDelay = 12000
+    $script:PathToolTip.SetToolTip($script:RepoPathLabel, $script:RepoRoot)
     $environment.Controls.Add($environmentTitle)
     $environment.Controls.Add($script:NodeBadge)
     $environment.Controls.Add($script:NpmBadge)
@@ -876,18 +948,20 @@ function Initialize-ControlPanel {
 
     $actions = New-Object System.Windows.Forms.TableLayoutPanel
     $actions.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $actions.AutoSize = $true
+    $actions.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
     $actions.ColumnCount = 2
     $actions.RowCount = 2
     $actions.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
     $actions.Padding = [System.Windows.Forms.Padding]::Empty
     $actions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
     $actions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
-    $actions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
-    $actions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
+    $actions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $actions.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
 
     $cardWeb = New-ActionCard -Title 'Abrir la aplicación' -Description 'Servidor seguro local y vista previa para pruebas rápidas.' `
         -PrimaryAction @{ Type = 'server'; Mode = 'https'; Text = 'Web HTTPS'; TaskName = 'Web segura' } `
-        -SecondaryAction @{ Type = 'server'; Mode = 'preview'; Text = 'Preview HTTP'; TaskName = 'Vista previa' } `
+        -SecondaryAction @{ Type = 'server'; Mode = 'preview'; Text = 'Vista previa HTTP'; TaskName = 'Vista previa' } `
         -PrimaryWidth 112 -SecondaryWidth 112
     $cardChecks = New-ActionCard -Title 'Calidad del proyecto' -Description 'Ejecuta la batería de pruebas y la comprobación integral.' `
         -PrimaryAction @{ Type = 'task'; Arguments = @('run', 'check'); Text = 'Comprobación completa'; TaskName = 'Comprobación completa' } `
@@ -923,18 +997,18 @@ function Initialize-ControlPanel {
     $logHeading = New-Object System.Windows.Forms.Panel
     $logHeading.Dock = [System.Windows.Forms.DockStyle]::Fill
     $logHeading.BackColor = $script:Palette.White
-    $logTitle = New-UiLabel -Text 'Actividad reciente' -FontSize 9 -Bold $true -ForeColor $script:Palette.Ink
+    $logTitle = New-UiLabel -Text 'Actividad reciente' -FontSize 10 -Bold $true -ForeColor $script:Palette.Ink
     $logTitle.Location = [System.Drawing.Point]::new(12, 9)
     $clearButton = New-Object System.Windows.Forms.Button
     $clearButton.Text = 'Limpiar'
-    $clearButton.Size = [System.Drawing.Size]::new(62, 25)
+    $clearButton.Size = [System.Drawing.Size]::new(72, 30)
     $clearButton.Dock = [System.Windows.Forms.DockStyle]::Right
     $clearButton.Margin = [System.Windows.Forms.Padding]::new(0, 3, 8, 3)
     $clearButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $clearButton.FlatAppearance.BorderSize = 0
     $clearButton.BackColor = $script:Palette.White
     $clearButton.ForeColor = $script:Palette.Muted
-    $clearButton.Font = [System.Drawing.Font]::new('Segoe UI', 7.5)
+    $clearButton.Font = [System.Drawing.Font]::new('Segoe UI', 9)
     $clearButton.add_Click({ $script:OutputBox.Clear() })
     $logHeading.Controls.Add($logTitle)
     $logHeading.Controls.Add($clearButton)
@@ -945,7 +1019,8 @@ function Initialize-ControlPanel {
     $script:OutputBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
     $script:OutputBox.BackColor = [System.Drawing.Color]::FromArgb(249, 251, 252)
     $script:OutputBox.ForeColor = [System.Drawing.Color]::FromArgb(78, 96, 111)
-    $script:OutputBox.Font = [System.Drawing.Font]::new('Consolas', 8.5)
+    $script:OutputBox.Font = [System.Drawing.Font]::new('Consolas', 9)
+    $script:OutputBox.WordWrap = $true
     $script:OutputBox.HideSelection = $false
     $script:OutputBox.MaxLength = 30000
     $script:OutputBox.Margin = [System.Windows.Forms.Padding]::new(10)
@@ -956,9 +1031,9 @@ function Initialize-ControlPanel {
     $footer = New-Object System.Windows.Forms.Panel
     $footer.Dock = [System.Windows.Forms.DockStyle]::Fill
     $footer.Margin = [System.Windows.Forms.Padding]::Empty
-    $footerLabel = New-UiLabel -Text 'ONAT  ·  Herramientas de desarrollo local' -FontSize 7 -ForeColor ([System.Drawing.Color]::FromArgb(138, 152, 164))
+    $footerLabel = New-UiLabel -Text 'ONAT  ·  Herramientas de desarrollo local' -FontSize 8.5 -ForeColor ([System.Drawing.Color]::FromArgb(138, 152, 164))
     $footerLabel.Location = [System.Drawing.Point]::new(0, 6)
-    $script:StatusText = New-UiLabel -Text 'Listo' -FontSize 7 -Bold $true -ForeColor $script:Palette.Green -AutoSize $false
+    $script:StatusText = New-UiLabel -Text 'Listo' -FontSize 8.5 -Bold $true -ForeColor $script:Palette.Green -AutoSize $false
     $script:StatusText.Dock = [System.Windows.Forms.DockStyle]::Right
     $script:StatusText.Width = 180
     $script:StatusText.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
@@ -1056,6 +1131,7 @@ function Initialize-ControlPanel {
 
     [System.Windows.Forms.Application]::Run($form)
     $form.Dispose()
+    if ($script:PathToolTip) { $script:PathToolTip.Dispose() }
 }
 
 Initialize-ControlPanel
