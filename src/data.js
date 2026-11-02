@@ -206,12 +206,58 @@ function cellText(value) {
   return String(value ?? '').trim();
 }
 
+function getSourceFields(headers, dataRows) {
+  const labelCounts = new Map();
+  return headers.reduce((fields, header, index) => {
+    const sourceLabel = cellText(header);
+    const hasData = dataRows.some((row) => row?.[index] !== '' && row?.[index] != null);
+    if (!sourceLabel && !hasData) return fields;
+
+    const displayLabel = sourceLabel || `Columna ${index + 1} (sin encabezado)`;
+    const normalized = normalizeHeader(sourceLabel) || `campo${index + 1}`;
+    const occurrence = (labelCounts.get(normalized) || 0) + 1;
+    labelCounts.set(normalized, occurrence);
+    fields.push({
+      key: occurrence === 1 ? normalized : `${normalized}_${occurrence}`,
+      label: occurrence === 1 ? displayLabel : `${displayLabel} (${occurrence})`,
+      sourceLabel,
+      index,
+    });
+    return fields;
+  }, []);
+}
+
+function normalizeSourceValue(value, label) {
+  if (value == null || value === '') return '';
+  const normalized = normalizeHeader(label);
+  if (value instanceof Date) return parseDate(value) || value;
+  if (/(fecha|date|periodo)/.test(normalized)) return parseDate(value) || cellText(value);
+  return typeof value === 'string' ? value.trim() : value;
+}
+
+function sourceDimensionValue(value, label) {
+  const normalized = normalizeSourceValue(value, label);
+  if (normalized instanceof Date) {
+    return `${normalized.getUTCFullYear()}-${String(normalized.getUTCMonth() + 1).padStart(2, '0')}-${String(normalized.getUTCDate()).padStart(2, '0')}`;
+  }
+  return cellText(normalized);
+}
+
+function extractSourceData(row, fields) {
+  return Object.fromEntries(fields.flatMap(({ key, sourceLabel, label, index }) => {
+    const value = normalizeSourceValue(row?.[index], sourceLabel || label);
+    return value === '' ? [] : [[key, value]];
+  }));
+}
+
 function parseClientRows(rows, headerInfo, fileName, sheetName) {
   const { index: headerIndex, columns, headers } = headerInfo;
+  const dataRows = rows.slice(headerIndex + 1);
+  const fields = getSourceFields(headers, dataRows);
   const clients = [];
   let skippedRows = 0;
 
-  rows.slice(headerIndex + 1).forEach((row, rowOffset) => {
+  dataRows.forEach((row, rowOffset) => {
     const contributor = cellText(row[columns.contributor]);
     if (!contributor) return;
     const key = contributorKey(contributor);
@@ -231,6 +277,7 @@ function parseClientRows(rows, headerInfo, fileName, sheetName) {
       periodStart,
       createdAt,
       frequency,
+      sourceData: extractSourceData(row, fields),
       sourceRow: headerIndex + rowOffset + 2,
       fileName,
       sheetName,
@@ -238,16 +285,18 @@ function parseClientRows(rows, headerInfo, fileName, sheetName) {
   });
 
   if (!clients.length) throw new Error('No encontré filas con un valor en la columna Contribuyente.');
-  return { clients, skippedRows, sourceRows: rows.length - headerIndex - 1, headers };
+  return { clients, skippedRows, sourceRows: rows.length - headerIndex - 1, headers, fields };
 }
 
 function parsePaymentRows(rows, headerInfo, fileName, sheetName) {
   const { index: headerIndex, columns, headers } = headerInfo;
+  const dataRows = rows.slice(headerIndex + 1);
+  const fields = getSourceFields(headers, dataRows);
   const dimensions = getDimensionColumns(headers, columns);
   const payments = [];
   let skippedRows = 0;
 
-  rows.slice(headerIndex + 1).forEach((row, rowOffset) => {
+  dataRows.forEach((row, rowOffset) => {
     const contributor = cellText(row[columns.contributor]);
     const amount = parseAmount(row[columns.amount]);
     const payDate = parseDate(row[columns.paymentDate]);
@@ -260,8 +309,8 @@ function parsePaymentRows(rows, headerInfo, fileName, sheetName) {
     const period = columns.period >= 0 ? parseDate(row[columns.period]) : null;
     const tax = columns.tax >= 0 ? cellText(row[columns.tax]) : '';
     const dimensionValues = {};
-    dimensions.forEach(({ key, index }) => {
-      dimensionValues[key] = cellText(row[index]);
+    dimensions.forEach(({ key, label, index }) => {
+      dimensionValues[key] = sourceDimensionValue(row[index], label);
     });
 
     payments.push({
@@ -275,6 +324,7 @@ function parsePaymentRows(rows, headerInfo, fileName, sheetName) {
       periodKey: monthKey(period || payDate),
       dateBasis: period ? 'period' : 'payment',
       dimensions: dimensionValues,
+      sourceData: extractSourceData(row, fields),
       sourceRow: headerIndex + rowOffset + 2,
       fileName,
       sheetName,
@@ -288,6 +338,7 @@ function parsePaymentRows(rows, headerInfo, fileName, sheetName) {
     skippedRows,
     sourceRows: rows.length - headerIndex - 1,
     headers,
+    fields,
   };
 }
 

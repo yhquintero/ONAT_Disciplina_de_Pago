@@ -1,3 +1,6 @@
+import { normalizeHeader } from './data.js';
+import { formatMoney } from './formatting.js';
+
 const PAPER_SIZES = {
   a4: { label: 'A4', excel: 9, pdf: 'a4' },
   letter: { label: 'Carta', excel: 1, pdf: 'letter' },
@@ -8,6 +11,12 @@ const PAPER_SIZES = {
 
 const HEADER_FILL = '173A50';
 const HEADER_TEXT = 'FFFFFF';
+
+function isMoneyHeader(value) {
+  const normalized = normalizeHeader(value);
+  return ['importe', 'cobrado', 'monto', 'valortributo', 'saldopendiente', 'deuda', 'recaudado', 'pagado', 'baseimponible']
+    .some((hint) => normalized.includes(hint));
+}
 
 function printable(value) {
   if (value instanceof Date) {
@@ -100,12 +109,14 @@ export async function createXlsxBlob({
   });
 
   headers.forEach((columnHeader, index) => {
-    const normalized = String(columnHeader).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const normalized = normalizeHeader(columnHeader);
     const column = sheet.getColumn(index + 1);
-    if (normalized.includes('importe') || normalized.includes('cobrado')) column.numFmt = '#,##0.00 " $"';
-    if (normalized.includes('primer pago') || normalized.includes('ultimo pago')) column.numFmt = 'dd/mm/yyyy';
-    if (normalized.includes('cantidad de pagos')) column.numFmt = '0';
-    if (normalized.includes('dias de atraso')) column.numFmt = '0 "días"';
+    if (isMoneyHeader(columnHeader)) column.numFmt = '[$$-409] #,##0.00';
+    if (rows.some((row) => row[index] instanceof Date)) {
+      column.numFmt = normalized.includes('periodo') ? 'mmm yyyy' : 'dd/mm/yyyy';
+    }
+    if (normalized.includes('cantidaddepagos')) column.numFmt = '0';
+    if (normalized.includes('diasdeatraso')) column.numFmt = '0 "días"';
   });
 
   sheet.autoFilter = { from: 'A1', to: `${sheet.getColumn(sheet.columnCount).letter}${Math.max(1, sheet.rowCount)}` };
@@ -166,13 +177,9 @@ export async function createPdfBlob({
     tableStartY += imageHeight + 7;
   }
 
-  const amountColumns = new Set(headers.flatMap((header, index) => {
-    const normalized = String(header).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    return normalized.includes('importe') || normalized.includes('cobrado') ? [index] : [];
-  }));
-  const pdfMoney = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const amountColumns = new Set(headers.flatMap((header, index) => (isMoneyHeader(header) ? [index] : [])));
   const body = rows.map((row) => row.map((value, index) => (
-    amountColumns.has(index) && typeof value === 'number' ? pdfMoney.format(value) : printable(value)
+    amountColumns.has(index) && typeof value === 'number' ? formatMoney(value) : printable(value)
   )));
   autoTable(doc, {
     head: [headers],

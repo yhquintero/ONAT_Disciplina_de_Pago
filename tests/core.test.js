@@ -86,13 +86,41 @@ test('agrupa pagos dinámicamente por período y por contribuyente', () => {
   assert.equal(allGroups.totalGroupCount, 2);
 });
 
-test('carga los dos Excel de muestra incluidos en el proyecto', async () => {
+test('carga los dos Excel de muestra y conserva sus columnas originales', async () => {
   const [clients, payments] = await Promise.all([
     parseWorkbook(await readFile('.xlsx/Cliente - obligación (vector fiscal).xlsx'), 'clients'),
     parseWorkbook(await readFile('.xlsx/Pago1 (persona jurídica).xlsx'), 'payments'),
   ]);
   assert.equal(clients.clients.length, 190);
   assert.equal(payments.payments.length, 17291);
+  assert.ok(clients.fields.some((field) => field.label === 'Valor tributo'));
+  assert.equal(clients.clients[0].sourceData.valortributo, 0);
+  assert.ok(clients.clients[0].sourceData.periodoinicial instanceof Date);
+  assert.ok(payments.fields.some((field) => field.label === 'Organismo dirección'));
+  assert.equal(payments.payments[0].sourceData.importe, 14241638.46);
+  assert.equal(payments.payments[0].sourceData.dpa, '2108- Pinar del Río');
+  assert.equal(payments.payments[0].sourceRow, 2);
   assert.ok(payments.dimensions.some((dimension) => dimension.key === 'dpa'));
   assert.ok(payments.payments.some((row) => row.periodKey === '2026-03'));
+});
+
+test('extrae columnas personalizadas, encabezados repetidos y fechas de origen', async () => {
+  const XLSX = await import('@e965/xlsx');
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet([
+    ['Reporte de pagos'],
+    ['Contribuyente', 'Importe ($)', 'Fecha pago', 'DPA', 'Código', 'Código', '', 'Fecha informe'],
+    ['10000000999- Prueba S.R.L.', 1234.5, '2026-04-10', '2108', 'A', 'B', 'dato sin título', '31/03/2026'],
+  ]);
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Movimientos');
+  const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  const parsed = await parseWorkbook(buffer, 'payments');
+  const paymentRow = parsed.payments[0];
+  assert.equal(parsed.fields.find((field) => field.label === 'Código (2)')?.key, 'codigo_2');
+  assert.equal(paymentRow.sourceData.codigo, 'A');
+  assert.equal(paymentRow.sourceData.codigo_2, 'B');
+  assert.equal(paymentRow.sourceData.campo7, 'dato sin título');
+  assert.equal(paymentRow.sourceData.fechainforme.toISOString(), '2026-03-31T00:00:00.000Z');
+  assert.equal(paymentRow.dimensions.fechainforme, '2026-03-31');
+  assert.equal(paymentRow.sheetName, 'Movimientos');
 });
