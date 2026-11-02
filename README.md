@@ -22,17 +22,17 @@ npm run dev:preview -- --port 4173  # HTTP para el preview de Arena
 
 El preview de Arena debe usar el comando HTTP; `npm run dev` queda reservado para el acceso HTTPS directo desde tu equipo.
 
-### Panel de Control PowerShell (Windows)
+### Panel de Control visual PowerShell (Windows)
 
-El repositorio incluye `scripts/PanelControl.ps1`, un menú local para iniciar la Web segura o la vista previa, instalar dependencias, ejecutar pruebas, compilar, revisar seguridad y consultar la hoja de ruta. No requiere permisos de administrador y no modifica los Excel importados ni publica cambios.
+`scripts/PanelControl.ps1` abre una interfaz gráfica nativa de Windows Forms; no presenta un menú de consola. Desde sus tarjetas puedes abrir la Web HTTPS local o la vista previa, instalar dependencias, ejecutar pruebas, validar el proyecto, compilar, auditar npm y consultar las mejoras propuestas. Las tareas npm se ejecutan en segundo plano y muestran su avance en **Actividad reciente**. Los servidores se inician sin abrir ventanas de comandos y se pueden detener desde el panel. No requiere permisos de administrador, no modifica los Excel importados ni publica cambios.
 
-Desde la carpeta raíz del repositorio, abre PowerShell y ejecuta:
+Requiere Windows con Windows PowerShell 5.1 o PowerShell 7 para Windows. Desde la carpeta raíz del repositorio, ejecútalo así:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\PanelControl.ps1
 ```
 
-También puedes usar `pwsh` si tienes PowerShell 7. El servidor que inicie el menú queda en otra ventana de terminal; ciérrala para detenerlo. Para HTTPS local, acepta la excepción del certificado autofirmado si tu navegador la muestra.
+También puedes abrir el archivo `.ps1` desde el Explorador si Windows permite ejecutarlo. Para HTTPS local, acepta la excepción del certificado de desarrollo autofirmado si tu navegador la muestra. El botón **Detener servidores** cierra los procesos iniciados por este panel; al cerrar la ventana puedes elegir detenerlos o dejarlos ejecutándose.
 
 Comprobación antes de integrar cambios:
 
@@ -112,6 +112,6 @@ Como siguiente mejora recomendada, empezar por **validación y conciliación de 
 - `src/exporters.js`: creación local de libros `.xlsx` y PDF con formato de impresión.
 - `src/formatting.js`: formato monetario común para la interfaz y reportes.
 - `src/App.jsx` / `src/styles.css`: interfaz, importación, exportaciones y gráficos.
-- `scripts/PanelControl.ps1`: menú local de PowerShell para gestionar desarrollo, pruebas y compilación.
+- `scripts/PanelControl.ps1`: interfaz gráfica Windows Forms para gestionar desarrollo, pruebas y compilación sin usar un menú de consola.
 - `tests/core.test.js`, `tests/exporters.test.js` y `tests/formatting.test.js`: pruebas de lectura de libros, extracción de columnas, fechas, métricas, exportaciones y formato monetario.
 - `.github/workflows/ci.yml` y `pages.yml`: verificación y publicación.
