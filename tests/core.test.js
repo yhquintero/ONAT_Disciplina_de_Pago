@@ -86,6 +86,20 @@ test('agrupa pagos dinámicamente por período y por contribuyente', () => {
   assert.equal(allGroups.totalGroupCount, 2);
 });
 
+test('consolida métodos de pago repetidos en los gráficos dinámicos', () => {
+  const payments = [
+    { ...payment('A', 'Contribuyente A', 10, '2026-01-14'), dimensions: { metodo: 'Depósito' } },
+    { ...payment('B', 'Contribuyente B', 20, '2026-01-14'), dimensions: { metodo: ' deposito  ' } },
+    { ...payment('C', 'Contribuyente C', 30, '2026-01-14'), dimensions: { metodo: 'DEPÓSITO' } },
+    { ...payment('D', 'Contribuyente D', 40, '2026-01-14'), dimensions: { metodo: 'Cheque' } },
+  ];
+  const pivot = buildPivot({ payments, dimension: 'metodo', metric: 'payments', rosterOnly: false, limit: 0 });
+  assert.equal(pivot.rows.length, 2);
+  assert.equal(pivot.rows[0].label, 'Depósito');
+  assert.equal(pivot.rows[0].count, 3);
+  assert.equal(pivot.rows[1].label, 'Cheque');
+});
+
 test('carga los dos Excel de muestra y conserva sus columnas originales', async () => {
   const [clients, payments] = await Promise.all([
     parseWorkbook(await readFile('.xlsx/Cliente - obligación (vector fiscal).xlsx'), 'clients'),
@@ -117,6 +131,7 @@ test('extrae columnas personalizadas, encabezados repetidos y fechas de origen',
   const parsed = await parseWorkbook(buffer, 'payments');
   const paymentRow = parsed.payments[0];
   assert.equal(parsed.fields.find((field) => field.label === 'Código (2)')?.key, 'codigo_2');
+  assert.deepEqual(parsed.dimensions.filter((field) => field.key.startsWith('codigo')).map((field) => field.key), ['codigo']);
   assert.equal(paymentRow.sourceData.codigo, 'A');
   assert.equal(paymentRow.sourceData.codigo_2, 'B');
   assert.equal(paymentRow.sourceData.campo7, 'dato sin título');
