@@ -5,7 +5,7 @@ dist/
 .env
 .env.*
 
-# Evita versionar accidentalmente padrones y registros fiscales de clientes.
+# Evita versionar accidentalmente listados de contribuyentes y registros fiscales de clientes.
 *.xls
 *.xlsx
 *.xlsm

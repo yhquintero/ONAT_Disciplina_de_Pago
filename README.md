@@ -1,6 +1,6 @@
 # ONAT · Disciplina de pago
 
-Panel web para cruzar un padrón de contribuyentes con un registro de pagos, detectar pagos sin registrar y explorar los cobros de **Importe ($)** con gráficos dinámicos. La aplicación no tiene backend: los archivos que cada usuario selecciona se procesan dentro de su navegador.
+Panel web para cruzar un Patrón de contribuyentes con un registro de pagos, detectar pagos sin registrar y explorar los cobros de **Importe ($)** con gráficos dinámicos. La aplicación no tiene backend: los archivos que cada usuario selecciona se procesan dentro de su navegador.
 
 ## Empezar en local
 
@@ -11,7 +11,16 @@ npm ci
 npm run dev
 ```
 
-Vite mostrará una dirección local, normalmente `http://localhost:5173`. En desarrollo local se cargan los dos libros de muestra de `.xlsx/` para facilitar las pruebas. El modo de desarrollo no debe exponerse a Internet.
+El comando principal inicia HTTPS en **`https://localhost:5173`** con un certificado autofirmado de desarrollo; el navegador puede pedirte que aceptes la excepción local. Los libros de muestra de `.xlsx/` se cargan solo en desarrollo para facilitar las pruebas. No expongas el servidor de desarrollo a Internet.
+
+Comandos alternativos:
+
+```bash
+npm run dev:http                 # HTTP local en http://localhost:5173
+npm run dev:preview -- --port 4173  # HTTP para el preview de Arena
+```
+
+El preview de Arena debe usar el comando HTTP; `npm run dev` queda reservado para el acceso HTTPS directo desde tu equipo.
 
 Comprobación antes de integrar cambios:
 
@@ -44,7 +53,7 @@ El flujo `.github/workflows/ci.yml` también valida pruebas y compilación en ca
 
 Importa por separado:
 
-1. **Padrón de clientes**: una hoja con la columna `Contribuyente` y todos los clientes que se deben revisar.
+1. **Patrón de clientes**: una hoja con la columna `Contribuyente` y todos los clientes que se deben revisar.
 2. **Registro de pagos**: una hoja con `Contribuyente`, `Importe ($)` y `Fecha pago` / `Fecha de pago`.
 
 Se admiten archivos `.xls`, `.xlsx`, `.xlsm` y `.xlsb`. Si hay varias hojas, se selecciona automáticamente la que mejor coincide con los encabezados. El cruce prioriza el código de contribuyente que aparece antes del guion; si falta, usa el nombre normalizado. Cuando el registro contiene la columna `Período`, se usa ese mes como período de obligación. Si no está, se usa el mes de `Fecha de pago` y la interfaz lo advierte.
@@ -53,20 +62,33 @@ Se admiten archivos `.xls`, `.xlsx`, `.xlsm` y `.xlsb`. Si hay varias hojas, se 
 
 El valor inicial es **los primeros 10 días hábiles de cada mes**. En **Regla** se puede cambiar el día hábil límite y agregar feriados. Sábados y domingos se excluyen automáticamente; no se descarga ni se presume un calendario oficial. Un pago en el día límite cuenta como puntual; uno posterior se clasifica como **Fuera de fecha**. Para pagos fraccionados, el cliente se marca fuera de fecha si alguna transacción del período supera el vencimiento.
 
-**“Sin pago”** significa que no aparece una transacción coincidente en el registro importado. Se requiere el padrón completo para identificar esos casos. El panel no inventa importes adeudados ni calcula saldos porque eso requiere conocer la deuda esperada. Revisa también la periodicidad definida en el padrón antes de usar los estados para una actuación oficial.
+**“Sin pago”** significa que no aparece una transacción coincidente en el registro importado. Se requiere el Patrón completo para identificar esos casos. El panel no inventa importes adeudados ni calcula saldos porque eso requiere conocer la deuda esperada. Revisa también la periodicidad definida en el Patrón antes de usar los estados para una actuación oficial.
 
 ## Funcionalidad
 
 - Indicadores de importe recaudado, contribuyentes con pago, pagos tardíos y clientes sin pago registrado.
 - Gráficos de evolución por período, puntualidad y ranking de contribuyentes.
-- Explorador dinámico: agrupa por período, fecha de pago, contribuyente, tributo y otras columnas detectadas; muestra suma de importe, número de pagos o contribuyentes únicos.
-- Filtros de período y tributo, búsqueda por contribuyente y exportación CSV.
-- Preferencias de vencimiento y feriados guardadas en el almacenamiento local del navegador. Los libros importados viven en memoria hasta recargar o cerrar la pestaña.
+- Explorador dinámico: agrupa por período, fecha de pago, contribuyente, tributo y otras columnas detectadas; muestra suma de importe, número de pagos o contribuyentes únicos. Permite gráficos de barras, líneas, área y dona, además de limitar el número de grupos visibles.
+- Exportación a `.xlsx`, PDF y CSV. Los reportes de seguimiento incluyen Contribuyente, Tributo, Estado, Importe cobrado ($), Cantidad de pagos, Primer pago, Último pago y Días de atraso. Excel aplica negrita a la primera columna, ajusta anchos automáticamente y configura la impresión; PDF y Excel admiten A4, Carta, A3, Legal y A5, en orientación horizontal o vertical. Al exportar el explorador dinámico a PDF, se incluyen el gráfico visible y su tabla de datos.
+- Filtros de período y tributo, búsqueda por contribuyente y preferencias de vencimiento/feriados guardadas localmente. Los libros importados viven en memoria hasta recargar o cerrar la pestaña.
+
+## Ideas para mejoras futuras (por etapas)
+
+Estas propuestas no se activan automáticamente; se pueden abordar una por una según prioridad:
+
+1. **Validación de importación:** detectar duplicados, filas incompletas, identificadores ambiguos y pagos con fechas fuera del período, con un informe descargable antes de analizar.
+2. **Revisión de casos:** permitir anotar una observación por contribuyente/pago y marcar filas revisadas, sin cambiar los datos originales.
+3. **Comparación temporal:** comparar meses o años y mostrar variaciones de importe, puntualidad y contribuyentes pendientes.
+4. **Trazabilidad del cálculo:** explicar por fila el vencimiento aplicado, los días de atraso y las transacciones que originaron el estado.
+5. **Uso compartido opcional:** si se necesita colaboración, evaluar primero perfiles, permisos y copias de respaldo; los datos fiscales requerirían un backend protegido y no deberían publicarse en GitHub Pages.
+
+Como siguiente mejora recomendada, empezar por la **validación de importación**: reduce errores antes de que afecten al análisis y mantiene intacto el procesamiento local.
 
 ## Arquitectura
 
 - `src/data.js`: lectura de Excel y normalización de encabezados, importada bajo demanda.
 - `src/analytics.js`: cálculo de vencimientos, cruce y métricas.
+- `src/exporters.js`: creación local de libros `.xlsx` y PDF con formato de impresión.
 - `src/App.jsx` / `src/styles.css`: interfaz y gráficos.
-- `tests/core.test.js`: pruebas de fechas, clasificación, pivotes y libros de muestra.
+- `tests/core.test.js` y `tests/exporters.test.js`: pruebas de fechas, clasificación, pivotes, libros de muestra y exportaciones.
 - `.github/workflows/ci.yml` y `pages.yml`: verificación y publicación.

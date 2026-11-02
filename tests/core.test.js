@@ -78,9 +78,12 @@ test('agrupa pagos dinámicamente por período y por contribuyente', () => {
   ];
   const byPeriod = buildPivot({ payments, clients, taxFilter: '0400722', dimension: 'period', metric: 'amount', rosterOnly: true });
   const byClient = buildPivot({ payments, clients, taxFilter: '0400722', dimension: 'contributor', metric: 'payments', scope: 'selected', period: '2026-01', rosterOnly: true });
+  const allGroups = buildPivot({ payments, clients, dimension: 'contributor', metric: 'payments', rosterOnly: true, limit: 0 });
   assert.deepEqual(byPeriod.values, [170]);
   assert.equal(byClient.rows.length, 2);
   assert.equal(byClient.rows[0].count, 2);
+  assert.equal(allGroups.rows.length, 2);
+  assert.equal(allGroups.totalGroupCount, 2);
 });
 
 test('carga los dos Excel de muestra incluidos en el proyecto', async () => {
