@@ -66,6 +66,7 @@ const countLabel = (value) => integerFormat.format(Number(value) || 0);
 
 const navItems = [
   { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
+  { id: 'control', label: 'Panel de control', icon: SlidersHorizontal },
   { id: 'charts', label: 'Gráficos dinámicos', icon: BarChart3 },
   { id: 'clients', label: 'Contribuyentes', icon: Users },
 ];
@@ -231,6 +232,8 @@ function Sidebar({ activeView, onNavigate, onImport, model, loading }) {
             key={id}
             onClick={() => onNavigate(id)}
             aria-current={activeView === id ? 'page' : undefined}
+            aria-label={label}
+            title={label}
           >
             <Icon size={19} strokeWidth={1.8} />
             <span>{label}</span>
@@ -697,6 +700,223 @@ function GetStartedCard({ data, onImport }) {
       <button type="button" className="primary-button welcome-import" onClick={onImport}><Upload size={16} /> Importar archivos Excel</button>
       <div className="welcome-privacy"><LockKeyhole size={14} /> Los datos se procesan localmente y no se envían a un servidor.</div>
     </section>
+  );
+}
+
+function ControlActionCard({ icon: Icon, title, detail, onClick, disabled = false }) {
+  return (
+    <button type="button" className="control-action-card" onClick={onClick} disabled={disabled}>
+      <span className="control-action-icon"><Icon size={17} /></span>
+      <span className="control-action-copy"><strong>{title}</strong><small>{detail}</small></span>
+      <ArrowRight className="control-action-arrow" size={16} />
+    </button>
+  );
+}
+
+function ControlSourceCard({ role, title, description, meta, fields = [], onImport }) {
+  const isClients = role === 'clients';
+  const Icon = isClients ? Users : FileSpreadsheet;
+  return (
+    <article className={`control-source-card ${meta ? 'source-ready' : ''}`}>
+      <div className="control-source-top">
+        <span className={`control-source-icon ${isClients ? 'source-icon-violet' : 'source-icon-green'}`}><Icon size={17} /></span>
+        <div className="control-source-copy">
+          <strong>{title}</strong>
+          <small>{meta ? (meta.sample ? 'Libro de muestra · desarrollo' : 'Procesado en este navegador') : description}</small>
+        </div>
+        <span className={`control-source-status ${meta ? 'status-ready' : 'status-pending'}`}>{meta ? 'Cargado' : 'Pendiente'}</span>
+      </div>
+      {meta ? (
+        <>
+          <div className="control-source-file">
+            <FileText size={14} />
+            <span title={meta.fileName}>{meta.fileName}</span>
+            <button type="button" onClick={onImport}>Reemplazar</button>
+          </div>
+          <div className="control-source-stats">
+            <span><strong>{countLabel(meta.count)}</strong> registros</span>
+            <span><strong>{countLabel(fields.length)}</strong> columnas</span>
+            {meta.size > 0 && <span>{fileSize(meta.size)}</span>}
+          </div>
+          {fields.length > 0 && (
+            <div className="control-source-fields" aria-label={`Columnas detectadas para ${title}`}>
+              {fields.slice(0, 5).map((field, index) => <span key={`${field.key}-${index}`}>{field.label}</span>)}
+              {fields.length > 5 && <span className="field-overflow">+{countLabel(fields.length - 5)}</span>}
+            </div>
+          )}
+          {meta.skippedRows > 0 && <div className="control-source-warning"><AlertTriangle size={13} /> {countLabel(meta.skippedRows)} filas incompletas omitidas</div>}
+        </>
+      ) : (
+        <div className="control-source-empty">
+          <span>{description}</span>
+          <button type="button" className="text-button" onClick={onImport}>Importar Excel <ArrowRight size={14} /></button>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function ControlPanelView({ model, period, workingDays, holidays, data, onImport, onSettings, onNavigate }) {
+  const periodBasedPayments = data.payments.filter((payment) => payment.dateBasis === 'period').length;
+  const paymentDateFallbacks = data.payments.length - periodBasedPayments;
+  const skippedRows = (data.clientMeta?.skippedRows || 0) + (data.paymentMeta?.skippedRows || 0);
+  const fieldCount = data.clientFields.length + data.paymentFields.length;
+  const qualityChecks = [
+    {
+      key: 'clients',
+      label: 'Patrón de clientes',
+      detail: data.clients.length ? `${countLabel(data.clients.length)} contribuyentes disponibles` : 'Importa el listado completo para identificar quién no pagó',
+      status: data.clients.length ? 'good' : 'pending',
+    },
+    {
+      key: 'payments',
+      label: 'Registro de pagos',
+      detail: data.payments.length ? `${countLabel(data.payments.length)} movimientos leídos` : 'Importa un Excel con importe y fecha de pago',
+      status: data.payments.length ? 'good' : 'pending',
+    },
+    {
+      key: 'period',
+      label: 'Período de obligación',
+      detail: !data.payments.length
+        ? 'Pendiente de revisar'
+        : paymentDateFallbacks
+          ? `${countLabel(paymentDateFallbacks)} pagos usan Fecha de pago como período`
+          : `${countLabel(periodBasedPayments)} pagos tienen Período explícito`,
+      status: !data.payments.length ? 'pending' : paymentDateFallbacks ? 'warning' : 'good',
+    },
+    {
+      key: 'columns',
+      label: 'Columnas detectadas',
+      detail: fieldCount ? `${countLabel(fieldCount)} campos originales conservados` : 'Las columnas aparecerán al importar los libros',
+      status: fieldCount ? 'good' : 'pending',
+    },
+    {
+      key: 'rows',
+      label: 'Filas incompletas',
+      detail: skippedRows ? `${countLabel(skippedRows)} filas omitidas durante la lectura` : data.payments.length ? 'No se omitieron filas incompletas' : 'Se comprobará al importar',
+      status: skippedRows ? 'warning' : data.payments.length ? 'good' : 'pending',
+    },
+  ];
+  const readyChecks = qualityChecks.filter((check) => check.status === 'good').length;
+  const completion = Math.round((readyChecks / qualityChecks.length) * 100);
+  const reviewCount = model.lateCount + model.unpaidCount + model.pendingCount;
+  const punctuality = model.paidCount ? Math.round(model.punctuality) : null;
+
+  return (
+    <div className="control-view">
+      <section className="control-hero">
+        <div className="control-hero-copy">
+          <div className="control-hero-kicker"><span className="control-live-dot" /> CENTRO DE CONTROL · SOLO EN ESTE NAVEGADOR</div>
+          <h2>Todo tu seguimiento,<br />en un solo lugar.</h2>
+          <p>Administra los libros, revisa la calidad de los datos y ajusta la regla de puntualidad antes de consultar los resultados.</p>
+          <div className="control-hero-actions">
+            <button type="button" className="primary-button" onClick={onImport}><Upload size={15} /> Actualizar archivos</button>
+            <button type="button" className="control-hero-secondary" onClick={onSettings}><Settings2 size={15} /> Configurar regla</button>
+          </div>
+        </div>
+        <div className="control-score-panel">
+          <span className="control-score-caption">PUNTUALIDAD DEL PERÍODO</span>
+          <div
+            className="control-score-ring"
+            style={{ background: punctuality == null ? 'conic-gradient(rgba(255,255,255,.16) 0 100%)' : `conic-gradient(#72cbbb 0 ${punctuality}%, rgba(255,255,255,.16) ${punctuality}% 100%)` }}
+          >
+            <div className="control-score-inner"><strong>{punctuality == null ? '—' : `${punctuality}%`}</strong><small>en fecha</small></div>
+          </div>
+          <p>{model.paidCount ? `${countLabel(model.statusCounts.paid)} puntuales de ${countLabel(model.paidCount)} con pago` : 'Sin pagos registrados en este período'}</p>
+        </div>
+      </section>
+
+      <div className="control-section-heading">
+        <div><span className="card-eyebrow">ACCESOS RÁPIDOS</span><h3>¿Qué necesitas hacer?</h3></div>
+        <span className="control-context-pill"><CalendarDays size={13} /> {period ? monthLabel(period) : 'Sin período'}</span>
+      </div>
+      <div className="control-action-grid">
+        <ControlActionCard icon={Upload} title="Actualizar Excel" detail="Reemplazar el Patrón o los pagos" onClick={onImport} />
+        <ControlActionCard icon={Settings2} title="Regla de puntualidad" detail={`${workingDays} días hábiles · ${countLabel(holidays.length)} feriados`} onClick={onSettings} />
+        <ControlActionCard icon={Users} title="Revisar contribuyentes" detail={`${countLabel(reviewCount)} casos requieren atención`} onClick={() => onNavigate('clients')} disabled={!model.rosterRows.length} />
+        <ControlActionCard icon={BarChart3} title="Explorar gráficos" detail="Comparar cobros y columnas" onClick={() => onNavigate('charts')} disabled={!data.payments.length} />
+      </div>
+
+      <div className="control-main-grid">
+        <section className="surface-card control-card control-sources-panel">
+          <div className="control-card-heading">
+            <div><span className="card-eyebrow">LIBROS DE EXCEL</span><h3>Fuentes de información</h3><p>Archivos procesados localmente; nunca se envían a un servidor.</p></div>
+            <span className="control-field-count"><FileSpreadsheet size={14} /> {countLabel(fieldCount)} campos</span>
+          </div>
+          <div className="control-source-stack">
+            <ControlSourceCard
+              role="clients"
+              title="Patrón de clientes"
+              description="Listado de contribuyentes esperados"
+              meta={data.clientMeta}
+              fields={data.clientFields}
+              onImport={onImport}
+            />
+            <ControlSourceCard
+              role="payments"
+              title="Registro de pagos"
+              description="Contribuyente, importe, fecha y atributos"
+              meta={data.paymentMeta}
+              fields={data.paymentFields}
+              onImport={onImport}
+            />
+          </div>
+        </section>
+
+        <section className="surface-card control-card control-quality-panel">
+          <div className="control-card-heading">
+            <div><span className="card-eyebrow">REVISIÓN PREVIA</span><h3>Estado de preparación</h3><p>Una guía rápida antes de usar el análisis.</p></div>
+            <span className={`control-completion-badge ${completion === 100 ? 'is-complete' : ''}`}>{completion === 100 ? 'Listo' : `${readyChecks}/${qualityChecks.length}`}</span>
+          </div>
+          <div className="control-progress-track" role="progressbar" aria-label="Controles de preparación completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion}><span style={{ width: `${completion}%` }} /></div>
+          <div className="control-quality-list">
+            {qualityChecks.map((check) => {
+              const Icon = check.status === 'good' ? CheckCircle2 : check.status === 'warning' ? AlertTriangle : Clock3;
+              return (
+                <div className={`control-quality-row quality-${check.status}`} key={check.key}>
+                  <span className="control-quality-icon"><Icon size={15} /></span>
+                  <span className="control-quality-copy"><strong>{check.label}</strong><small>{check.detail}</small></span>
+                  <span className="control-quality-state">{check.status === 'good' ? 'OK' : check.status === 'warning' ? 'Revisar' : 'Pendiente'}</span>
+                </div>
+              );
+            })}
+          </div>
+          {paymentDateFallbacks > 0 && (
+            <div className="control-quality-note"><Info size={14} /> Los períodos inferidos desde Fecha de pago pueden diferir del mes real de obligación.</div>
+          )}
+        </section>
+      </div>
+
+      <div className="control-bottom-grid">
+        <section className="surface-card control-card control-focus-panel">
+          <div className="control-card-heading">
+            <div><span className="card-eyebrow">ATENCIÓN DEL PERÍODO</span><h3>{model.overdue ? 'Revisa los casos vencidos' : 'Casos a revisar'}</h3></div>
+            <span className={`control-attention-badge ${reviewCount ? 'has-attention' : ''}`}>{countLabel(reviewCount)} casos</span>
+          </div>
+          <p className="control-focus-description">{!data.payments.length
+            ? 'Importa los pagos para ver atrasos, pendientes y contribuyentes sin registro.'
+            : reviewCount
+              ? 'Consulta los estados de cada contribuyente para priorizar el seguimiento del período.'
+              : 'No se detectan atrasos ni pagos pendientes en la selección actual.'}</p>
+          <div className="control-focus-breakdown">
+            <span><i className="focus-dot focus-late" /> Fuera de fecha <strong>{countLabel(model.lateCount)}</strong></span>
+            <span><i className="focus-dot focus-unpaid" /> Vencidos sin pago <strong>{countLabel(model.unpaidCount)}</strong></span>
+            <span><i className="focus-dot focus-pending" /> Pendientes <strong>{countLabel(model.pendingCount)}</strong></span>
+          </div>
+          <button type="button" className="control-link-button" onClick={() => onNavigate('clients')} disabled={!model.rosterRows.length}>Abrir seguimiento de contribuyentes <ArrowRight size={15} /></button>
+        </section>
+
+        <section className="surface-card control-card control-rule-panel">
+          <div className="control-card-heading">
+            <div><span className="card-eyebrow">REGLA ACTIVA</span><h3>Plazo de puntualidad</h3></div>
+            <span className={`control-rule-status ${model.overdue ? 'is-overdue' : ''}`}>{period ? (model.overdue ? 'Vencido' : 'Vigente') : 'Sin período'}</span>
+          </div>
+          <div className="control-rule-summary"><strong>{workingDays}</strong><span>días hábiles<br />desde el inicio del mes</span></div>
+          <p>{model.deadline ? `Vencimiento calculado: ${formatDate(model.deadline)}.` : 'Selecciona un período para calcular su vencimiento.'} {holidays.length ? `${countLabel(holidays.length)} feriados personalizados.` : 'No hay feriados personalizados.'}</p>
+          <button type="button" className="secondary-button control-rule-button" onClick={onSettings}><Settings2 size={14} /> Ajustar regla</button>
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -1468,7 +1688,7 @@ function App() {
     });
   }, [model.rosterRows, search, statusTab]);
 
-  const currentTitle = activeView === 'clients' ? 'Contribuyentes' : activeView === 'charts' ? 'Gráficos dinámicos' : 'Resumen';
+  const currentTitle = activeView === 'control' ? 'Panel de control' : activeView === 'clients' ? 'Contribuyentes' : activeView === 'charts' ? 'Gráficos dinámicos' : 'Resumen';
 
   const handleImport = async (file, role) => {
     setBusyRole(role);
@@ -1638,12 +1858,14 @@ function App() {
     setStatusTab('all');
   };
 
-  const title = activeView === 'charts' ? 'Análisis de cobros' : activeView === 'clients' ? 'Seguimiento de contribuyentes' : 'Disciplina de pago';
-  const subtitle = activeView === 'charts'
-    ? 'Cruza las columnas de tu Excel y explora la recaudación con gráficos interactivos.'
-    : activeView === 'clients'
-      ? 'Consulta quién pagó, quién se atrasó y quién no tiene pago registrado.'
-      : 'Una vista clara de los cobros, la puntualidad y los contribuyentes pendientes.';
+  const title = activeView === 'control' ? 'Panel de control' : activeView === 'charts' ? 'Análisis de cobros' : activeView === 'clients' ? 'Seguimiento de contribuyentes' : 'Disciplina de pago';
+  const subtitle = activeView === 'control'
+    ? 'Administra tus fuentes, valida los datos y coordina el seguimiento del período.'
+    : activeView === 'charts'
+      ? 'Cruza las columnas de tu Excel y explora la recaudación con gráficos interactivos.'
+      : activeView === 'clients'
+        ? 'Consulta quién pagó, quién se atrasó y quién no tiene pago registrado.'
+        : 'Una vista clara de los cobros, la puntualidad y los contribuyentes pendientes.';
 
   return (
     <div className="app-shell">
@@ -1653,7 +1875,7 @@ function App() {
           onImport={() => setImportOpen(true)}
           onExport={() => openClientExport(model.rosterRows, 'Seguimiento de pagos')}
           exportDisabled={loadingSample || !model.rosterRows.length}
-          showExport={activeView === 'overview' && model.rosterRows.length > 0}
+          showExport={(activeView === 'overview' || activeView === 'control') && model.rosterRows.length > 0}
           onSettings={() => setSettingsOpen(true)}
           currentTitle={currentTitle}
         />
@@ -1685,11 +1907,24 @@ function App() {
             </Notice>
           )}
 
-          {!loadingSample && !data.payments.length ? (
+          {!loadingSample && !data.payments.length && activeView !== 'control' ? (
             <GetStartedCard data={data} onImport={() => setImportOpen(true)} />
           ) : (
             <>
               <StatsGrid model={model} loading={loadingSample} />
+
+              {activeView === 'control' && (
+                <ControlPanelView
+                  model={model}
+                  period={period}
+                  workingDays={workingDays}
+                  holidays={holidays}
+                  data={data}
+                  onImport={() => setImportOpen(true)}
+                  onSettings={() => setSettingsOpen(true)}
+                  onNavigate={handleNavigate}
+                />
+              )}
 
               {activeView === 'overview' && (
                 <SummaryView
