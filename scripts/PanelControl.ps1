@@ -99,6 +99,10 @@ function New-UiLabel {
     if ($Bold) { $style = [System.Drawing.FontStyle]::Bold }
     $label.Font = [System.Drawing.Font]::new('Segoe UI', $FontSize, $style)
     $label.BackColor = [System.Drawing.Color]::Transparent
+    $label.Margin = [System.Windows.Forms.Padding]::Empty
+    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    $label.AutoEllipsis = $false
+    $label.UseMnemonic = $false
     return $label
 }
 
@@ -449,7 +453,7 @@ function New-ActionButton {
     $button.MinimumSize = [System.Drawing.Size]::new($Width, 38)
     $button.Padding = [System.Windows.Forms.Padding]::new(10, 5, 10, 5)
     $button.Margin = [System.Windows.Forms.Padding]::new(0, 0, 8, 5)
-    $button.Font = [System.Drawing.Font]::new('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+    $button.Font = [System.Drawing.Font]::new('Segoe UI', 9.5, [System.Drawing.FontStyle]::Bold)
     $button.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $button.UseMnemonic = $false
     $button.Cursor = [System.Windows.Forms.Cursors]::Hand
@@ -499,7 +503,7 @@ function New-ActionCard {
     $card.Dock = [System.Windows.Forms.DockStyle]::Fill
     $card.AutoSize = $true
     $card.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
-    $card.MinimumSize = [System.Drawing.Size]::new(290, 116)
+    $card.MinimumSize = [System.Drawing.Size]::new(280, 0)
     $card.Margin = [System.Windows.Forms.Padding]::new(0, 0, 10, 10)
     $card.Padding = [System.Windows.Forms.Padding]::new(12)
     $card.BackColor = $script:Palette.White
@@ -518,19 +522,12 @@ function New-ActionCard {
     $cardLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $cardLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
 
-    $titleLabel = New-UiLabel -Text $Title -FontSize 10.5 -Bold $true -ForeColor $script:Palette.Ink -AutoSize $false
-    $titleLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $titleLabel.Height = 25
-    $titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-    $titleLabel.UseMnemonic = $false
+    $titleLabel = New-UiLabel -Text $Title -FontSize 10.5 -Bold $true -ForeColor $script:Palette.Ink
+    $titleLabel.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 5)
 
-    $descriptionLabel = New-UiLabel -Text $Description -FontSize 9 -ForeColor $script:Palette.Muted -AutoSize $true
-    $descriptionLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $descriptionLabel.Margin = [System.Windows.Forms.Padding]::new(0, 1, 0, 5)
-    $descriptionLabel.MaximumSize = [System.Drawing.Size]::new(540, 0)
-    $descriptionLabel.TextAlign = [System.Drawing.ContentAlignment]::TopLeft
-    $descriptionLabel.AutoEllipsis = $false
-    $descriptionLabel.UseMnemonic = $false
+    $descriptionLabel = New-UiLabel -Text $Description -FontSize 9.5 -ForeColor $script:Palette.Muted
+    $descriptionLabel.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
+    $descriptionLabel.MaximumSize = [System.Drawing.Size]::new(520, 0)
 
     $buttonRow = New-Object System.Windows.Forms.FlowLayoutPanel
     $buttonRow.Dock = [System.Windows.Forms.DockStyle]::Fill
@@ -552,9 +549,12 @@ function New-ActionCard {
     $card.Tag = [pscustomobject]@{ Description = $descriptionLabel }
     $card.add_SizeChanged({
         param($sender, $eventArgs)
-        if ($sender.Tag -and $sender.Tag.Description) {
-            $availableWidth = [Math]::Max(180, $sender.ClientSize.Width - $sender.Padding.Horizontal - 4)
-            $sender.Tag.Description.MaximumSize = [System.Drawing.Size]::new($availableWidth, 0)
+        if ($sender.Tag -and $sender.Tag.Description -and $sender.ClientSize.Width -gt 0) {
+            $availableWidth = [Math]::Max(180, $sender.ClientSize.Width - $sender.Padding.Horizontal - 6)
+            $newMaximum = [System.Drawing.Size]::new($availableWidth, 0)
+            if ($sender.Tag.Description.MaximumSize -ne $newMaximum) {
+                $sender.Tag.Description.MaximumSize = $newMaximum
+            }
         }
     })
     return $card
@@ -573,33 +573,55 @@ function Show-ImprovementDialog {
     $dialog.BackColor = $script:Palette.Canvas
     $dialog.Font = [System.Drawing.Font]::new('Segoe UI', 9.5)
 
-    $header = New-Object System.Windows.Forms.Panel
-    $header.Dock = [System.Windows.Forms.DockStyle]::Top
-    $header.Height = 96
-    $header.Padding = [System.Windows.Forms.Padding]::new(22, 16, 20, 8)
+    $dialogLayout = New-Object System.Windows.Forms.TableLayoutPanel
+    $dialogLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $dialogLayout.ColumnCount = 1
+    $dialogLayout.RowCount = 3
+    $dialogLayout.Margin = [System.Windows.Forms.Padding]::Empty
+    $dialogLayout.Padding = [System.Windows.Forms.Padding]::Empty
+    $dialogLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $dialogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $dialogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $dialogLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+
+    $header = New-Object System.Windows.Forms.TableLayoutPanel
+    $header.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $header.AutoSize = $true
+    $header.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $header.ColumnCount = 1
+    $header.RowCount = 2
+    $header.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 1)
+    $header.Padding = [System.Windows.Forms.Padding]::new(22, 16, 20, 14)
     $header.BackColor = $script:Palette.White
+    $header.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $header.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $header.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $heading = New-UiLabel -Text 'Mejoras propuestas' -FontSize 17 -Bold $true -ForeColor $script:Palette.Ink
-    $heading.Location = [System.Drawing.Point]::new(22, 13)
+    $heading.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 4)
     $subheading = New-UiLabel -Text 'Ideas para evolucionar la Web gradualmente, manteniendo el procesamiento local.' -FontSize 9.5 -ForeColor $script:Palette.Muted
-    $subheading.Location = [System.Drawing.Point]::new(23, 46)
-    $header.Controls.Add($heading)
-    $header.Controls.Add($subheading)
+    $header.Controls.Add($heading, 0, 0)
+    $header.Controls.Add($subheading, 0, 1)
 
     $list = New-Object System.Windows.Forms.FlowLayoutPanel
     $list.Dock = [System.Windows.Forms.DockStyle]::Fill
     $list.AutoScroll = $true
     $list.WrapContents = $false
     $list.FlowDirection = [System.Windows.Forms.FlowDirection]::TopDown
-    $list.Padding = [System.Windows.Forms.Padding]::new(15, 14, 15, 12)
+    $list.Padding = [System.Windows.Forms.Padding]::new(16, 14, 16, 12)
+    $list.Margin = [System.Windows.Forms.Padding]::Empty
     $list.BackColor = $script:Palette.Canvas
     $list.add_SizeChanged({
         param($sender, $eventArgs)
-        $availableWidth = [Math]::Max(500, $sender.ClientSize.Width - $sender.Padding.Horizontal - 24)
+        $availableWidth = [Math]::Max(480, $sender.ClientSize.Width - $sender.Padding.Horizontal - 26)
         foreach ($itemPanel in $sender.Controls) {
             $itemPanel.Width = $availableWidth
-            $ideaText = $itemPanel.Controls['IdeaText']
-            if ($ideaText) {
-                $ideaText.Width = [Math]::Max(360, $itemPanel.ClientSize.Width - 72)
+            $ideaText = $itemPanel.Tag
+            if ($ideaText -and $itemPanel.ClientSize.Width -gt 0) {
+                $textWidth = [Math]::Max(300, $itemPanel.ClientSize.Width - 82)
+                $newMaximum = [System.Drawing.Size]::new($textWidth, 0)
+                if ($ideaText.MaximumSize -ne $newMaximum) {
+                    $ideaText.MaximumSize = $newMaximum
+                }
             }
         }
     })
@@ -607,60 +629,67 @@ function Show-ImprovementDialog {
     $number = 0
     foreach ($idea in $script:ImprovementIdeas) {
         $number += 1
-        $item = New-Object System.Windows.Forms.Panel
+        $item = New-Object System.Windows.Forms.TableLayoutPanel
+        $item.AutoSize = $true
+        $item.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowOnly
+        $item.ColumnCount = 2
+        $item.RowCount = 1
         $item.Width = 660
-        $item.Height = 78
         $item.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 9)
+        $item.Padding = [System.Windows.Forms.Padding]::new(10, 8, 10, 8)
         $item.BackColor = $script:Palette.White
         $item.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+        $item.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 44)) | Out-Null
+        $item.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+        $item.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
 
         $numberBadge = New-Object System.Windows.Forms.Label
         $numberBadge.Text = '{0:D2}' -f $number
-        $numberBadge.Location = [System.Drawing.Point]::new(12, 19)
         $numberBadge.Size = [System.Drawing.Size]::new(36, 36)
+        $numberBadge.MinimumSize = [System.Drawing.Size]::new(36, 36)
+        $numberBadge.Margin = [System.Windows.Forms.Padding]::Empty
         $numberBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $numberBadge.Anchor = [System.Windows.Forms.AnchorStyles]::None
         $numberBadge.BackColor = [System.Drawing.Color]::FromArgb(235, 245, 244)
         $numberBadge.ForeColor = $script:Palette.Teal
         $numberBadge.Font = [System.Drawing.Font]::new('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
 
-        $ideaLabel = New-UiLabel -Text $idea -FontSize 9.5 -ForeColor $script:Palette.Ink -AutoSize $false
+        $ideaLabel = New-UiLabel -Text $idea -FontSize 9.5 -ForeColor $script:Palette.Ink
         $ideaLabel.Name = 'IdeaText'
-        $ideaLabel.Location = [System.Drawing.Point]::new(60, 8)
-        $ideaLabel.Size = [System.Drawing.Size]::new(585, 62)
-        $ideaLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-        $ideaLabel.AutoEllipsis = $false
-        $ideaLabel.UseMnemonic = $false
-        $item.Controls.Add($numberBadge)
-        $item.Controls.Add($ideaLabel)
+        $ideaLabel.MaximumSize = [System.Drawing.Size]::new(580, 0)
+        $ideaLabel.Margin = [System.Windows.Forms.Padding]::new(8, 0, 0, 0)
+        $item.Controls.Add($numberBadge, 0, 0)
+        $item.Controls.Add($ideaLabel, 1, 0)
+        $item.Tag = $ideaLabel
         $list.Controls.Add($item)
     }
 
-    $footer = New-Object System.Windows.Forms.Panel
-    $footer.Dock = [System.Windows.Forms.DockStyle]::Bottom
-    $footer.Height = 58
+    $footer = New-Object System.Windows.Forms.FlowLayoutPanel
+    $footer.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $footer.AutoSize = $true
+    $footer.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $footer.FlowDirection = [System.Windows.Forms.FlowDirection]::RightToLeft
+    $footer.WrapContents = $false
+    $footer.Padding = [System.Windows.Forms.Padding]::new(12, 10, 14, 10)
+    $footer.Margin = [System.Windows.Forms.Padding]::Empty
     $footer.BackColor = $script:Palette.White
-    $footerLayout = New-Object System.Windows.Forms.TableLayoutPanel
-    $footerLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $footerLayout.ColumnCount = 2
-    $footerLayout.RowCount = 1
-    $footerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $footerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 120)) | Out-Null
-    $footerSpacer = New-Object System.Windows.Forms.Panel
-    $footerSpacer.Dock = [System.Windows.Forms.DockStyle]::Fill
     $closeButton = New-Object System.Windows.Forms.Button
     $closeButton.Text = 'Cerrar'
-    $closeButton.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $closeButton.Margin = [System.Windows.Forms.Padding]::new(8, 11, 14, 11)
+    $closeButton.AutoSize = $true
+    $closeButton.MinimumSize = [System.Drawing.Size]::new(96, 36)
+    $closeButton.Padding = [System.Windows.Forms.Padding]::new(12, 6, 12, 6)
+    $closeButton.Margin = [System.Windows.Forms.Padding]::Empty
     $closeButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $closeButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $closeButton.FlatAppearance.BorderColor = $script:Palette.Line
     $closeButton.BackColor = $script:Palette.White
-    $footerLayout.Controls.Add($footerSpacer, 0, 0)
-    $footerLayout.Controls.Add($closeButton, 1, 0)
-    $footer.Controls.Add($footerLayout)
-    $dialog.Controls.Add($list)
-    $dialog.Controls.Add($footer)
-    $dialog.Controls.Add($header)
+    $closeButton.Font = [System.Drawing.Font]::new('Segoe UI', 9.5)
+    $footer.Controls.Add($closeButton)
+
+    $dialogLayout.Controls.Add($header, 0, 0)
+    $dialogLayout.Controls.Add($list, 0, 1)
+    $dialogLayout.Controls.Add($footer, 0, 2)
+    $dialog.Controls.Add($dialogLayout)
     $dialog.AcceptButton = $closeButton
     [void]$dialog.ShowDialog($script:Form)
     $dialog.Dispose()
@@ -703,13 +732,13 @@ function Initialize-ControlPanel {
     $form.Text = 'ONAT · Disciplina de pago | Panel de control'
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
     $workArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-    $initialWidth = [int][Math]::Min(1440, [Math]::Max(980, $workArea.Width - 48))
-    $initialHeight = [int][Math]::Min(920, [Math]::Max(680, $workArea.Height - 60))
+    $initialWidth = [int][Math]::Min(1440, [Math]::Max(900, $workArea.Width - 48))
+    $initialHeight = [int][Math]::Min(920, [Math]::Max(620, $workArea.Height - 60))
     $form.ClientSize = [System.Drawing.Size]::new($initialWidth, $initialHeight)
-    $form.MinimumSize = [System.Drawing.Size]::new(960, 640)
+    $form.MinimumSize = [System.Drawing.Size]::new(900, 560)
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
     $form.BackColor = $script:Palette.Canvas
-    $form.Font = [System.Drawing.Font]::new('Segoe UI', 9)
+    $form.Font = [System.Drawing.Font]::new('Segoe UI', 9.5)
     $form.MaximizeBox = $true
     $form.MinimizeBox = $true
     $form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
@@ -725,115 +754,153 @@ function Initialize-ControlPanel {
     $outerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
     $outerLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
 
-    $sidebar = New-Object System.Windows.Forms.Panel
+    # Sidebar: filas AutoSize + un separador elástico para que el pie no invada las acciones.
+    $sidebar = New-Object System.Windows.Forms.TableLayoutPanel
     $sidebar.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $sidebar.ColumnCount = 1
+    $sidebar.RowCount = 9
+    $sidebar.Padding = [System.Windows.Forms.Padding]::new(16, 18, 16, 14)
+    $sidebar.Margin = [System.Windows.Forms.Padding]::Empty
     $sidebar.BackColor = $script:Palette.Navy
+    $sidebar.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 1)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $sidebar.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+
+    $brandRow = New-Object System.Windows.Forms.FlowLayoutPanel
+    $brandRow.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $brandRow.AutoSize = $true
+    $brandRow.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $brandRow.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
+    $brandRow.WrapContents = $false
+    $brandRow.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 16)
+    $brandRow.Padding = [System.Windows.Forms.Padding]::Empty
+    $brandRow.BackColor = [System.Drawing.Color]::Transparent
 
     $logoTile = New-Object System.Windows.Forms.Panel
-    $logoTile.Location = [System.Drawing.Point]::new(19, 25)
-    $logoTile.Size = [System.Drawing.Size]::new(45, 45)
+    $logoTile.Size = [System.Drawing.Size]::new(46, 46)
+    $logoTile.MinimumSize = [System.Drawing.Size]::new(46, 46)
+    $logoTile.Margin = [System.Windows.Forms.Padding]::Empty
     $logoTile.BackColor = [System.Drawing.Color]::FromArgb(37, 82, 96)
-    $logoLabel = New-UiLabel -Text 'O' -FontSize 23 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 215, 210))
-    $logoLabel.Location = [System.Drawing.Point]::new(11, 4)
-    $logoLabel.BackColor = [System.Drawing.Color]::Transparent
+    $logoLabel = New-UiLabel -Text 'O' -FontSize 23 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 215, 210)) -AutoSize $false
+    $logoLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $logoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $logoTile.Controls.Add($logoLabel)
+
+    $brandStack = New-Object System.Windows.Forms.FlowLayoutPanel
+    $brandStack.AutoSize = $true
+    $brandStack.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $brandStack.FlowDirection = [System.Windows.Forms.FlowDirection]::TopDown
+    $brandStack.WrapContents = $false
+    $brandStack.Margin = [System.Windows.Forms.Padding]::new(12, 0, 0, 0)
+    $brandStack.Padding = [System.Windows.Forms.Padding]::Empty
+    $brandStack.BackColor = [System.Drawing.Color]::Transparent
     $brandLabel = New-UiLabel -Text 'ONAT' -FontSize 19 -Bold $true -ForeColor $script:Palette.White
-    $brandLabel.Location = [System.Drawing.Point]::new(76, 24)
-    $brandCaption = New-UiLabel -Text 'CONTROL DE PAGO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(133, 166, 181))
-    $brandCaption.Location = [System.Drawing.Point]::new(78, 49)
+    $brandCaption = New-UiLabel -Text 'CONTROL DE PAGO' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(133, 166, 181))
+    $brandCaption.Margin = [System.Windows.Forms.Padding]::new(0, 2, 0, 0)
+    $brandStack.Controls.Add($brandLabel)
+    $brandStack.Controls.Add($brandCaption)
+    $brandRow.Controls.Add($logoTile)
+    $brandRow.Controls.Add($brandStack)
 
     $sidebarRule = New-Object System.Windows.Forms.Panel
-    $sidebarRule.Location = [System.Drawing.Point]::new(18, 94)
-    $sidebarRule.Size = [System.Drawing.Size]::new(200, 1)
+    $sidebarRule.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $sidebarRule.Margin = [System.Windows.Forms.Padding]::Empty
     $sidebarRule.BackColor = [System.Drawing.Color]::FromArgb(48, 74, 91)
-    $sideSection = New-UiLabel -Text 'ESPACIO DE TRABAJO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
-    $sideSection.Location = [System.Drawing.Point]::new(22, 119)
 
-    $activeNav = New-Object System.Windows.Forms.Panel
-    $activeNav.Location = [System.Drawing.Point]::new(12, 142)
-    $activeNav.Size = [System.Drawing.Size]::new(212, 44)
+    $sideSection = New-UiLabel -Text 'ESPACIO DE TRABAJO' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 166, 178))
+    $sideSection.Margin = [System.Windows.Forms.Padding]::new(4, 16, 0, 10)
+
+    $activeNav = New-Object System.Windows.Forms.TableLayoutPanel
+    $activeNav.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $activeNav.AutoSize = $true
+    $activeNav.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $activeNav.MinimumSize = [System.Drawing.Size]::new(0, 44)
+    $activeNav.ColumnCount = 2
+    $activeNav.RowCount = 1
+    $activeNav.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 18)
+    $activeNav.Padding = [System.Windows.Forms.Padding]::new(0, 8, 8, 8)
     $activeNav.BackColor = $script:Palette.NavyLight
+    $activeNav.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 3)) | Out-Null
+    $activeNav.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $activeNav.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $navMarker = New-Object System.Windows.Forms.Panel
-    $navMarker.Location = [System.Drawing.Point]::new(0, 11)
-    $navMarker.Size = [System.Drawing.Size]::new(3, 22)
+    $navMarker.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $navMarker.Margin = [System.Windows.Forms.Padding]::Empty
     $navMarker.BackColor = [System.Drawing.Color]::FromArgb(112, 203, 191)
-    $navLabel = New-UiLabel -Text 'Panel de control' -FontSize 9 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(239, 247, 249))
-    $navLabel.Location = [System.Drawing.Point]::new(18, 13)
-    $activeNav.Controls.Add($navMarker)
-    $activeNav.Controls.Add($navLabel)
+    $navLabel = New-UiLabel -Text 'Panel de control' -FontSize 9.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(239, 247, 249))
+    $navLabel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $navLabel.Margin = [System.Windows.Forms.Padding]::new(12, 0, 0, 0)
+    $activeNav.Controls.Add($navMarker, 0, 0)
+    $activeNav.Controls.Add($navLabel, 1, 0)
 
-    $accessLabel = New-UiLabel -Text 'ACCIONES' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(119, 149, 165))
-    $accessLabel.Location = [System.Drawing.Point]::new(22, 212)
+    $accessLabel = New-UiLabel -Text 'ACCIONES' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 166, 178))
+    $accessLabel.Margin = [System.Windows.Forms.Padding]::new(4, 0, 0, 8)
     $openFolderAction = @{ Type = 'folder'; Text = 'Abrir carpeta del proyecto' }
     $folderButton = New-ActionButton -Action $openFolderAction -Width 194
     $folderButton.AutoSize = $false
-    $folderButton.Location = [System.Drawing.Point]::new(16, 235)
-    $folderButton.Size = [System.Drawing.Size]::new(194, 38)
+    $folderButton.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $folderButton.MinimumSize = [System.Drawing.Size]::new(0, 42)
+    $folderButton.Height = 42
+    $folderButton.Margin = [System.Windows.Forms.Padding]::Empty
     $folderButton.BackColor = $script:Palette.Navy
-    $folderButton.ForeColor = [System.Drawing.Color]::FromArgb(190, 208, 216)
+    $folderButton.ForeColor = [System.Drawing.Color]::FromArgb(210, 225, 231)
     $folderButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(62, 92, 108)
     $folderButton.FlatAppearance.MouseOverBackColor = $script:Palette.NavyLight
     $folderButton.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-    $folderButton.Padding = [System.Windows.Forms.Padding]::new(10, 0, 0, 0)
-    $folderButton.Margin = [System.Windows.Forms.Padding]::Empty
+    $folderButton.Padding = [System.Windows.Forms.Padding]::new(10, 6, 8, 6)
 
     $script:StopServersButton = New-ActionButton -Action @{ Type = 'stop'; Text = 'Detener servidores' } -Width 200
     $script:StopServersButton.AutoSize = $false
-    $script:StopServersButton.Location = [System.Drawing.Point]::new(18, 535)
-    $script:StopServersButton.Size = [System.Drawing.Size]::new(200, 38)
+    $script:StopServersButton.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $script:StopServersButton.MinimumSize = [System.Drawing.Size]::new(0, 42)
+    $script:StopServersButton.Height = 42
+    $script:StopServersButton.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 12)
     $script:StopServersButton.BackColor = [System.Drawing.Color]::FromArgb(39, 62, 77)
     $script:StopServersButton.ForeColor = [System.Drawing.Color]::FromArgb(218, 231, 236)
     $script:StopServersButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(66, 92, 106)
     $script:StopServersButton.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(52, 75, 89)
     $script:StopServersButton.Enabled = $false
 
-    $privacyCard = New-Object System.Windows.Forms.Panel
-    $privacyCard.Location = [System.Drawing.Point]::new(17, 591)
-    $privacyCard.Size = [System.Drawing.Size]::new(202, 82)
+    $privacyCard = New-Object System.Windows.Forms.TableLayoutPanel
+    $privacyCard.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $privacyCard.AutoSize = $true
+    $privacyCard.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $privacyCard.ColumnCount = 1
+    $privacyCard.RowCount = 2
+    $privacyCard.Padding = [System.Windows.Forms.Padding]::new(12)
+    $privacyCard.Margin = [System.Windows.Forms.Padding]::Empty
     $privacyCard.BackColor = [System.Drawing.Color]::FromArgb(25, 57, 74)
+    $privacyCard.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $privacyCard.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $privacyCard.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $script:PrivacyCard = $privacyCard
-    $privacyTitle = New-UiLabel -Text 'EJECUCIÓN LOCAL' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 204, 196))
-    $privacyTitle.Location = [System.Drawing.Point]::new(12, 10)
-    $privacyText = New-UiLabel -Text 'La Web procesa tus Excel en el navegador.' -FontSize 8.5 -ForeColor ([System.Drawing.Color]::FromArgb(179, 200, 208)) -AutoSize $false
-    $privacyText.Location = [System.Drawing.Point]::new(12, 34)
-    $privacyText.Size = [System.Drawing.Size]::new(178, 40)
-    $script:PrivacyTextLabel = $privacyText
-    $privacyText.AutoEllipsis = $false
-    $privacyText.UseMnemonic = $false
-    $privacyCard.Controls.Add($privacyTitle)
-    $privacyCard.Controls.Add($privacyText)
+    $privacyTitle = New-UiLabel -Text 'EJECUCIÓN LOCAL' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(144, 204, 196))
+    $privacyTitle.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 7)
+    $script:PrivacyTextLabel = New-UiLabel -Text 'La Web procesa tus Excel en el navegador.' -FontSize 9 -ForeColor ([System.Drawing.Color]::FromArgb(196, 211, 218))
+    $script:PrivacyTextLabel.MaximumSize = [System.Drawing.Size]::new(180, 0)
+    $privacyCard.Controls.Add($privacyTitle, 0, 0)
+    $privacyCard.Controls.Add($script:PrivacyTextLabel, 0, 1)
 
-    $sidebar.Controls.Add($logoTile)
-    $sidebar.Controls.Add($brandLabel)
-    $sidebar.Controls.Add($brandCaption)
-    $sidebar.Controls.Add($sidebarRule)
-    $sidebar.Controls.Add($sideSection)
-    $sidebar.Controls.Add($activeNav)
-    $sidebar.Controls.Add($accessLabel)
-    $sidebar.Controls.Add($folderButton)
-    $sidebar.Controls.Add($script:StopServersButton)
-    $sidebar.Controls.Add($privacyCard)
-    $sidebar.add_SizeChanged({
-        param($sender, $eventArgs)
-        $width = $sender.ClientSize.Width
-        $height = $sender.ClientSize.Height
-        if ($script:StopServersButton) {
-            $script:StopServersButton.Location = [System.Drawing.Point]::new(18, [Math]::Max(250, $height - 152))
-            $script:StopServersButton.Width = [Math]::Max(150, $width - 36)
-        }
-        if ($script:PrivacyCard) {
-            $script:PrivacyCard.Location = [System.Drawing.Point]::new(17, [Math]::Max(320, $height - 94))
-            $script:PrivacyCard.Width = [Math]::Max(150, $width - 34)
-        }
-        if ($script:PrivacyTextLabel) {
-            $script:PrivacyTextLabel.Width = [Math]::Max(125, $width - 58)
-        }
-    })
+    $sidebar.Controls.Add($brandRow, 0, 0)
+    $sidebar.Controls.Add($sidebarRule, 0, 1)
+    $sidebar.Controls.Add($sideSection, 0, 2)
+    $sidebar.Controls.Add($activeNav, 0, 3)
+    $sidebar.Controls.Add($accessLabel, 0, 4)
+    $sidebar.Controls.Add($folderButton, 0, 5)
+    $sidebar.Controls.Add($script:StopServersButton, 0, 7)
+    $sidebar.Controls.Add($privacyCard, 0, 8)
 
     $mainPanel = New-Object System.Windows.Forms.Panel
     $mainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
     $mainPanel.BackColor = $script:Palette.Canvas
-    $mainPanel.Padding = [System.Windows.Forms.Padding]::new(25, 20, 25, 18)
+    $mainPanel.Padding = [System.Windows.Forms.Padding]::new(24, 18, 24, 14)
 
     $mainLayout = New-Object System.Windows.Forms.TableLayoutPanel
     $mainLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
@@ -842,109 +909,153 @@ function Initialize-ControlPanel {
     $mainLayout.Margin = [System.Windows.Forms.Padding]::Empty
     $mainLayout.Padding = [System.Windows.Forms.Padding]::Empty
     $mainLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 62)) | Out-Null
-    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 134)) | Out-Null
-    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 91)) | Out-Null
+    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 28)) | Out-Null
+    $mainLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
 
-    $header = New-Object System.Windows.Forms.Panel
+    # Encabezado: columnas medidas por contenido; no se mezclan ubicaciones absolutas con Dock.
+    $header = New-Object System.Windows.Forms.TableLayoutPanel
     $header.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $header.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
-    $headerLayout = New-Object System.Windows.Forms.TableLayoutPanel
-    $headerLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $headerLayout.ColumnCount = 2
-    $headerLayout.RowCount = 1
-    $headerLayout.Margin = [System.Windows.Forms.Padding]::Empty
-    $headerLayout.Padding = [System.Windows.Forms.Padding]::Empty
-    $headerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $headerLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Absolute, 190)) | Out-Null
-    $headerContent = New-Object System.Windows.Forms.Panel
+    $header.AutoSize = $true
+    $header.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $header.ColumnCount = 2
+    $header.RowCount = 1
+    $header.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
+    $header.Padding = [System.Windows.Forms.Padding]::Empty
+    $header.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $header.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $header.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+
+    $headerContent = New-Object System.Windows.Forms.TableLayoutPanel
     $headerContent.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $headerContent.AutoSize = $true
+    $headerContent.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $headerContent.ColumnCount = 1
+    $headerContent.RowCount = 2
+    $headerContent.Margin = [System.Windows.Forms.Padding]::Empty
+    $headerContent.Padding = [System.Windows.Forms.Padding]::Empty
+    $headerContent.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $headerContent.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $headerContent.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $pageTitle = New-UiLabel -Text 'Centro de control' -FontSize 20 -Bold $true -ForeColor $script:Palette.Ink
-    $pageTitle.Location = [System.Drawing.Point]::new(0, 0)
-    $pageSubtitle = New-UiLabel -Text 'Herramientas locales para desarrollar, comprobar y abrir la aplicación.' -FontSize 9.5 -ForeColor $script:Palette.Muted -AutoSize $false
-    $pageSubtitle.Dock = [System.Windows.Forms.DockStyle]::Top
-    $pageSubtitle.Height = 24
-    $pageSubtitle.Margin = [System.Windows.Forms.Padding]::new(1, 33, 0, 0)
-    $pageSubtitle.AutoEllipsis = $false
-    $pageSubtitle.UseMnemonic = $false
-    $headerContent.Controls.Add($pageSubtitle)
-    $headerContent.Controls.Add($pageTitle)
-    $statusSlot = New-Object System.Windows.Forms.Panel
-    $statusSlot.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $script:StatusBadge = New-Object System.Windows.Forms.Label
-    $script:StatusBadge.Text = 'LISTO'
-    $script:StatusBadge.Size = [System.Drawing.Size]::new(180, 30)
-    $script:StatusBadge.Location = [System.Drawing.Point]::new(0, 8)
+    $pageTitle.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 2)
+    $pageSubtitle = New-UiLabel -Text 'Herramientas locales para desarrollar, comprobar y abrir la aplicación.' -FontSize 10 -ForeColor $script:Palette.Muted
+    $headerContent.Controls.Add($pageTitle, 0, 0)
+    $headerContent.Controls.Add($pageSubtitle, 0, 1)
+
+    $script:StatusBadge = New-UiLabel -Text 'LISTO' -FontSize 8.5 -Bold $true -ForeColor $script:Palette.Green
+    $script:StatusBadge.AutoSize = $true
+    $script:StatusBadge.Padding = [System.Windows.Forms.Padding]::new(12, 8, 12, 8)
+    $script:StatusBadge.Margin = [System.Windows.Forms.Padding]::new(12, 0, 0, 0)
     $script:StatusBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $script:StatusBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8, [System.Drawing.FontStyle]::Bold)
     $script:StatusBadge.BackColor = $script:Palette.GreenLight
-    $script:StatusBadge.ForeColor = $script:Palette.Green
     $script:StatusBadge.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $statusSlot.Controls.Add($script:StatusBadge)
-    $headerLayout.Controls.Add($headerContent, 0, 0)
-    $headerLayout.Controls.Add($statusSlot, 1, 0)
-    $header.Controls.Add($headerLayout)
+    $script:StatusBadge.MaximumSize = [System.Drawing.Size]::new(260, 0)
+    $header.Controls.Add($headerContent, 0, 0)
+    $header.Controls.Add($script:StatusBadge, 1, 0)
 
-    $hero = New-Object System.Windows.Forms.Panel
+    # Hero de altura intrínseca. Cada renglón ocupa una fila propia y puede crecer con el texto.
+    $hero = New-Object System.Windows.Forms.TableLayoutPanel
     $hero.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $hero.AutoSize = $true
+    $hero.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $hero.ColumnCount = 1
+    $hero.RowCount = 4
     $hero.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
-    $hero.Padding = [System.Windows.Forms.Padding]::new(20, 15, 20, 12)
+    $hero.Padding = [System.Windows.Forms.Padding]::new(18, 15, 18, 14)
     $hero.BackColor = $script:Palette.Navy
-    $heroLabel = New-UiLabel -Text 'ONAT  ·  ENTORNO DE DESARROLLO' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
-    $heroLabel.Location = [System.Drawing.Point]::new(20, 13)
-    $heroTitle = New-UiLabel -Text 'Todo listo para poner el proyecto en marcha.' -FontSize 16 -Bold $true -ForeColor $script:Palette.White
-    $heroTitle.Location = [System.Drawing.Point]::new(20, 34)
-    $heroText = New-UiLabel -Text 'Inicia la Web local, valida los cambios y consulta los resultados sin salir del panel.' -FontSize 9.5 -ForeColor ([System.Drawing.Color]::FromArgb(188, 211, 218)) -AutoSize $false
-    $heroText.Dock = [System.Windows.Forms.DockStyle]::Top
-    $heroText.Height = 27
-    $heroText.Margin = [System.Windows.Forms.Padding]::new(21, 66, 20, 0)
-    $heroText.AutoEllipsis = $false
-    $heroText.UseMnemonic = $false
-    $heroDecoration = New-Object System.Windows.Forms.Panel
-    $heroDecoration.Size = [System.Drawing.Size]::new(7, 7)
-    $heroDecoration.Location = [System.Drawing.Point]::new(20, 105)
-    $heroDecoration.BackColor = [System.Drawing.Color]::FromArgb(105, 211, 175)
-    $heroCaption = New-UiLabel -Text 'LOCAL  ·  HTTPS  ·  SIN MODIFICAR LOS DATOS' -FontSize 8 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
-    $heroCaption.Location = [System.Drawing.Point]::new(35, 102)
-    $hero.Controls.Add($heroLabel)
-    $hero.Controls.Add($heroTitle)
-    $hero.Controls.Add($heroText)
-    $hero.Controls.Add($heroDecoration)
-    $hero.Controls.Add($heroCaption)
+    $hero.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    for ($row = 0; $row -lt 4; $row++) {
+        $hero.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    }
+    $heroLabel = New-UiLabel -Text 'ONAT  ·  ENTORNO DE DESARROLLO' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
+    $heroLabel.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 4)
+    $heroTitle = New-UiLabel -Text 'Todo listo para poner el proyecto en marcha.' -FontSize 17 -Bold $true -ForeColor $script:Palette.White
+    $heroTitle.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 5)
+    $heroText = New-UiLabel -Text 'Inicia la Web local, valida los cambios y consulta los resultados sin salir del panel.' -FontSize 10 -ForeColor ([System.Drawing.Color]::FromArgb(205, 220, 226))
+    $heroText.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 6)
+    $heroCaption = New-UiLabel -Text 'LOCAL  ·  HTTPS  ·  SIN MODIFICAR LOS DATOS' -FontSize 8.5 -Bold $true -ForeColor ([System.Drawing.Color]::FromArgb(151, 194, 203))
+    $hero.Controls.Add($heroLabel, 0, 0)
+    $hero.Controls.Add($heroTitle, 0, 1)
+    $hero.Controls.Add($heroText, 0, 2)
+    $hero.Controls.Add($heroCaption, 0, 3)
+    $hero.Tag = [pscustomobject]@{ Body = $heroText }
+    $hero.add_SizeChanged({
+        param($sender, $eventArgs)
+        if ($sender.Tag -and $sender.Tag.Body -and $sender.ClientSize.Width -gt 0) {
+            $availableWidth = [Math]::Max(240, $sender.ClientSize.Width - $sender.Padding.Horizontal - 4)
+            $newMaximum = [System.Drawing.Size]::new($availableWidth, 0)
+            if ($sender.Tag.Body.MaximumSize -ne $newMaximum) {
+                $sender.Tag.Body.MaximumSize = $newMaximum
+            }
+        }
+    })
 
-    $environment = New-Object System.Windows.Forms.Panel
+    # Estado del entorno: insignias en una fila con ajuste automático y ruta en una fila aparte.
+    $environment = New-Object System.Windows.Forms.TableLayoutPanel
     $environment.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $environment.AutoSize = $true
+    $environment.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $environment.ColumnCount = 1
+    $environment.RowCount = 2
     $environment.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
+    $environment.Padding = [System.Windows.Forms.Padding]::new(12)
     $environment.BackColor = $script:Palette.White
     $environment.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
-    $environmentTitle = New-UiLabel -Text 'ESTADO DEL ENTORNO' -FontSize 8 -Bold $true -ForeColor $script:Palette.Muted
-    $environmentTitle.Location = [System.Drawing.Point]::new(13, 9)
+    $environment.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $environment.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $environment.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+
+    $environmentHeader = New-Object System.Windows.Forms.FlowLayoutPanel
+    $environmentHeader.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $environmentHeader.AutoSize = $true
+    $environmentHeader.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $environmentHeader.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
+    $environmentHeader.WrapContents = $true
+    $environmentHeader.Margin = [System.Windows.Forms.Padding]::Empty
+    $environmentHeader.Padding = [System.Windows.Forms.Padding]::Empty
+    $environmentHeader.BackColor = [System.Drawing.Color]::Transparent
+    $environmentTitle = New-UiLabel -Text 'ESTADO DEL ENTORNO' -FontSize 8.5 -Bold $true -ForeColor $script:Palette.Muted
+    $environmentTitle.Margin = [System.Windows.Forms.Padding]::new(0, 7, 12, 7)
+
     $script:NodeBadge = New-Object System.Windows.Forms.Label
-    $script:NodeBadge.Location = [System.Drawing.Point]::new(172, 7)
-    $script:NodeBadge.Size = [System.Drawing.Size]::new(178, 27)
+    $script:NodeBadge.AutoSize = $true
+    $script:NodeBadge.Padding = [System.Windows.Forms.Padding]::new(9, 5, 9, 5)
+    $script:NodeBadge.Margin = [System.Windows.Forms.Padding]::new(0, 0, 8, 0)
     $script:NodeBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $script:NodeBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
     $script:NpmBadge = New-Object System.Windows.Forms.Label
-    $script:NpmBadge.Location = [System.Drawing.Point]::new(359, 7)
-    $script:NpmBadge.Size = [System.Drawing.Size]::new(162, 27)
+    $script:NpmBadge.AutoSize = $true
+    $script:NpmBadge.Padding = [System.Windows.Forms.Padding]::new(9, 5, 9, 5)
+    $script:NpmBadge.Margin = [System.Windows.Forms.Padding]::Empty
     $script:NpmBadge.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $script:NpmBadge.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
-    $script:RepoPathLabel = New-UiLabel -Text '' -FontSize 8.5 -Bold $false -ForeColor ([System.Drawing.Color]::FromArgb(129, 145, 157)) -AutoSize $false
-    $script:RepoPathLabel.Dock = [System.Windows.Forms.DockStyle]::Top
-    $script:RepoPathLabel.Height = 25
-    $script:RepoPathLabel.Margin = [System.Windows.Forms.Padding]::new(13, 42, 13, 0)
-    $script:RepoPathLabel.AutoEllipsis = $true
-    $script:RepoPathLabel.UseMnemonic = $false
+    $environmentHeader.Controls.Add($environmentTitle)
+    $environmentHeader.Controls.Add($script:NodeBadge)
+    $environmentHeader.Controls.Add($script:NpmBadge)
+
+    $script:RepoPathLabel = New-UiLabel -Text '' -FontSize 9 -Bold $false -ForeColor ([System.Drawing.Color]::FromArgb(108, 126, 140))
+    $script:RepoPathLabel.Margin = [System.Windows.Forms.Padding]::new(0, 7, 0, 0)
+    $script:RepoPathLabel.MaximumSize = [System.Drawing.Size]::new(1000, 0)
     $script:PathToolTip = New-Object System.Windows.Forms.ToolTip
     $script:PathToolTip.AutoPopDelay = 12000
     $script:PathToolTip.SetToolTip($script:RepoPathLabel, $script:RepoRoot)
-    $environment.Controls.Add($environmentTitle)
-    $environment.Controls.Add($script:NodeBadge)
-    $environment.Controls.Add($script:NpmBadge)
-    $environment.Controls.Add($script:RepoPathLabel)
+    $environment.Controls.Add($environmentHeader, 0, 0)
+    $environment.Controls.Add($script:RepoPathLabel, 0, 1)
+    $environment.Tag = [pscustomobject]@{ PathLabel = $script:RepoPathLabel }
+    $environment.add_SizeChanged({
+        param($sender, $eventArgs)
+        if ($sender.Tag -and $sender.Tag.PathLabel -and $sender.ClientSize.Width -gt 0) {
+            $availableWidth = [Math]::Max(200, $sender.ClientSize.Width - $sender.Padding.Horizontal - 4)
+            $newMaximum = [System.Drawing.Size]::new($availableWidth, 0)
+            if ($sender.Tag.PathLabel.MaximumSize -ne $newMaximum) {
+                $sender.Tag.PathLabel.MaximumSize = $newMaximum
+            }
+        }
+    })
 
     $actions = New-Object System.Windows.Forms.TableLayoutPanel
     $actions.Dock = [System.Windows.Forms.DockStyle]::Fill
@@ -952,7 +1063,7 @@ function Initialize-ControlPanel {
     $actions.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
     $actions.ColumnCount = 2
     $actions.RowCount = 2
-    $actions.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
+    $actions.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 10)
     $actions.Padding = [System.Windows.Forms.Padding]::Empty
     $actions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
     $actions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 50)) | Out-Null
@@ -975,7 +1086,6 @@ function Initialize-ControlPanel {
         -PrimaryAction @{ Type = 'task'; Arguments = @('audit'); Text = 'Auditoría npm'; TaskName = 'Auditoría de dependencias' } `
         -SecondaryAction @{ Type = 'roadmap'; Text = 'Ideas futuras' } `
         -PrimaryWidth 114 -SecondaryWidth 112
-
     $actions.Controls.Add($cardWeb, 0, 0)
     $actions.Controls.Add($cardChecks, 1, 0)
     $actions.Controls.Add($cardBuild, 0, 1)
@@ -986,32 +1096,45 @@ function Initialize-ControlPanel {
     $logCard.Margin = [System.Windows.Forms.Padding]::new(0, 0, 0, 8)
     $logCard.Padding = [System.Windows.Forms.Padding]::new(1)
     $logCard.BackColor = $script:Palette.Line
+
     $logLayout = New-Object System.Windows.Forms.TableLayoutPanel
     $logLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $logLayout.RowCount = 2
     $logLayout.ColumnCount = 1
+    $logLayout.RowCount = 2
     $logLayout.Margin = [System.Windows.Forms.Padding]::Empty
     $logLayout.Padding = [System.Windows.Forms.Padding]::Empty
-    $logLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Absolute, 34)) | Out-Null
+    $logLayout.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $logLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $logLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
-    $logHeading = New-Object System.Windows.Forms.Panel
+
+    $logHeading = New-Object System.Windows.Forms.TableLayoutPanel
     $logHeading.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $logHeading.AutoSize = $true
+    $logHeading.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $logHeading.ColumnCount = 2
+    $logHeading.RowCount = 1
+    $logHeading.Margin = [System.Windows.Forms.Padding]::Empty
+    $logHeading.Padding = [System.Windows.Forms.Padding]::new(12, 4, 10, 4)
     $logHeading.BackColor = $script:Palette.White
-    $logTitle = New-UiLabel -Text 'Actividad reciente' -FontSize 10 -Bold $true -ForeColor $script:Palette.Ink
-    $logTitle.Location = [System.Drawing.Point]::new(12, 9)
+    $logHeading.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $logHeading.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $logHeading.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $logTitle = New-UiLabel -Text 'Actividad reciente' -FontSize 10.5 -Bold $true -ForeColor $script:Palette.Ink
     $clearButton = New-Object System.Windows.Forms.Button
     $clearButton.Text = 'Limpiar'
-    $clearButton.Size = [System.Drawing.Size]::new(72, 30)
-    $clearButton.Dock = [System.Windows.Forms.DockStyle]::Right
-    $clearButton.Margin = [System.Windows.Forms.Padding]::new(0, 3, 8, 3)
+    $clearButton.AutoSize = $true
+    $clearButton.MinimumSize = [System.Drawing.Size]::new(72, 32)
+    $clearButton.Padding = [System.Windows.Forms.Padding]::new(10, 5, 10, 5)
+    $clearButton.Margin = [System.Windows.Forms.Padding]::Empty
     $clearButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $clearButton.FlatAppearance.BorderSize = 0
     $clearButton.BackColor = $script:Palette.White
     $clearButton.ForeColor = $script:Palette.Muted
     $clearButton.Font = [System.Drawing.Font]::new('Segoe UI', 9)
     $clearButton.add_Click({ $script:OutputBox.Clear() })
-    $logHeading.Controls.Add($logTitle)
-    $logHeading.Controls.Add($clearButton)
+    $logHeading.Controls.Add($logTitle, 0, 0)
+    $logHeading.Controls.Add($clearButton, 1, 0)
+
     $script:OutputBox = New-Object System.Windows.Forms.RichTextBox
     $script:OutputBox.Dock = [System.Windows.Forms.DockStyle]::Fill
     $script:OutputBox.ReadOnly = $true
@@ -1023,22 +1146,28 @@ function Initialize-ControlPanel {
     $script:OutputBox.WordWrap = $true
     $script:OutputBox.HideSelection = $false
     $script:OutputBox.MaxLength = 30000
-    $script:OutputBox.Margin = [System.Windows.Forms.Padding]::new(10)
+    $script:OutputBox.Margin = [System.Windows.Forms.Padding]::new(8)
     $logLayout.Controls.Add($logHeading, 0, 0)
     $logLayout.Controls.Add($script:OutputBox, 0, 1)
     $logCard.Controls.Add($logLayout)
 
-    $footer = New-Object System.Windows.Forms.Panel
+    $footer = New-Object System.Windows.Forms.TableLayoutPanel
     $footer.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $footer.AutoSize = $true
+    $footer.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $footer.ColumnCount = 2
+    $footer.RowCount = 1
     $footer.Margin = [System.Windows.Forms.Padding]::Empty
+    $footer.Padding = [System.Windows.Forms.Padding]::Empty
+    $footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::Percent, 100)) | Out-Null
+    $footer.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
+    $footer.RowStyles.Add([System.Windows.Forms.RowStyle]::new([System.Windows.Forms.SizeType]::AutoSize)) | Out-Null
     $footerLabel = New-UiLabel -Text 'ONAT  ·  Herramientas de desarrollo local' -FontSize 8.5 -ForeColor ([System.Drawing.Color]::FromArgb(138, 152, 164))
-    $footerLabel.Location = [System.Drawing.Point]::new(0, 6)
-    $script:StatusText = New-UiLabel -Text 'Listo' -FontSize 8.5 -Bold $true -ForeColor $script:Palette.Green -AutoSize $false
-    $script:StatusText.Dock = [System.Windows.Forms.DockStyle]::Right
-    $script:StatusText.Width = 180
+    $script:StatusText = New-UiLabel -Text 'Listo' -FontSize 8.5 -Bold $true -ForeColor $script:Palette.Green
     $script:StatusText.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-    $footer.Controls.Add($footerLabel)
-    $footer.Controls.Add($script:StatusText)
+    $script:StatusText.Margin = [System.Windows.Forms.Padding]::new(12, 0, 0, 0)
+    $footer.Controls.Add($footerLabel, 0, 0)
+    $footer.Controls.Add($script:StatusText, 1, 0)
 
     $mainLayout.Controls.Add($header, 0, 0)
     $mainLayout.Controls.Add($hero, 0, 1)
