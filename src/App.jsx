@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { version as appVersion } from '../package.json';
 import {
   AlertTriangle,
   ArrowRight,
@@ -71,6 +72,7 @@ const navItems = [
   { id: 'clients', label: 'Contribuyentes', icon: Users },
 ];
 
+const APP_VERSION = appVersion;
 const DEMO_DATA_ENABLED = import.meta.env.DEV;
 const DEMO_CLIENTS_URL = '/.xlsx/Cliente%20-%20obligaci%C3%B3n%20(vector%20fiscal).xlsx';
 const DEMO_PAYMENTS_URL = '/.xlsx/Pago1%20(persona%20jur%C3%ADdica).xlsx';
@@ -212,7 +214,7 @@ function Toast({ toast, onClose }) {
   );
 }
 
-function Sidebar({ activeView, onNavigate, onImport, model, loading }) {
+function Sidebar({ activeView, onNavigate, model, loading }) {
   return (
     <aside className="sidebar">
       <div className="brand-lockup">
@@ -242,13 +244,6 @@ function Sidebar({ activeView, onNavigate, onImport, model, loading }) {
         ))}
       </nav>
 
-      <div className="sidebar-rule" />
-      <button type="button" className="sidebar-import" onClick={onImport}>
-        <span className="sidebar-import-icon"><Upload size={17} /></span>
-        <span><strong>Importar Excel</strong><small>Actualiza tus datos</small></span>
-        <ChevronRight className="sidebar-import-arrow" size={16} />
-      </button>
-
       <div className="sidebar-spacer" />
       <div className="privacy-card">
         <div className="privacy-icon"><LockKeyhole size={15} /></div>
@@ -259,8 +254,7 @@ function Sidebar({ activeView, onNavigate, onImport, model, loading }) {
         <span className="privacy-dot" />
       </div>
       <div className="sidebar-footer">
-        <span className="sidebar-footer-mark">ONAT</span>
-        <span>Panel de disciplina de pago</span>
+        <span className="sidebar-version">Versión {APP_VERSION}</span>
       </div>
     </aside>
   );
@@ -276,7 +270,7 @@ function LandmarkMark() {
   );
 }
 
-function TopBar({ onImport, onExport, exportDisabled, showExport, onSettings, currentTitle }) {
+function TopBar({ onImport, onExport, exportDisabled, showExport, showImport = true, currentTitle }) {
   return (
     <div className="topbar">
       <div className="topbar-breadcrumb">
@@ -286,14 +280,11 @@ function TopBar({ onImport, onExport, exportDisabled, showExport, onSettings, cu
       </div>
       <div className="topbar-actions">
         <div className="private-status"><span className="status-led" /> Procesamiento local</div>
-        <button type="button" className="icon-button settings-trigger" aria-label="Configurar regla de pago" onClick={onSettings}>
-          <Settings2 size={18} />
-        </button>
         {showExport && <button type="button" className="secondary-button top-export" onClick={onExport} disabled={exportDisabled}><Download size={15} /><span>Exportar</span></button>}
-        <button type="button" className="primary-button top-import" onClick={onImport}>
+        {showImport && <button type="button" className="primary-button top-import" onClick={onImport}>
           <Upload size={16} />
           <span>Importar Excel</span>
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -652,18 +643,18 @@ function PreviewTable({ model, onViewAll }) {
             </tbody>
           </table>
         </div>
-      ) : <EmptyTable onImport={onViewAll} />}
+      ) : <EmptyTable onReview={onViewAll} />}
     </section>
   );
 }
 
-function EmptyTable({ onImport }) {
+function EmptyTable({ onReview }) {
   return (
     <div className="empty-table-state">
       <div className="empty-chart-icon"><Users size={20} /></div>
       <strong>No hay contribuyentes para este filtro</strong>
       <span>Revisa el tributo seleccionado o importa un Patrón de clientes.</span>
-      <button type="button" className="text-button" onClick={onImport}>Revisar datos <ArrowRight size={15} /></button>
+      <button type="button" className="text-button" onClick={onReview}>Revisar datos <ArrowRight size={15} /></button>
     </div>
   );
 }
@@ -703,17 +694,7 @@ function GetStartedCard({ data, onImport }) {
   );
 }
 
-function ControlActionCard({ icon: Icon, title, detail, onClick, disabled = false }) {
-  return (
-    <button type="button" className="control-action-card" onClick={onClick} disabled={disabled}>
-      <span className="control-action-icon"><Icon size={17} /></span>
-      <span className="control-action-copy"><strong>{title}</strong><small>{detail}</small></span>
-      <ArrowRight className="control-action-arrow" size={16} />
-    </button>
-  );
-}
-
-function ControlSourceCard({ role, title, description, meta, fields = [], onImport }) {
+function ControlSourceCard({ role, title, description, meta, fields = [] }) {
   const isClients = role === 'clients';
   const Icon = isClients ? Users : FileSpreadsheet;
   return (
@@ -731,7 +712,6 @@ function ControlSourceCard({ role, title, description, meta, fields = [], onImpo
           <div className="control-source-file">
             <FileText size={14} />
             <span title={meta.fileName}>{meta.fileName}</span>
-            <button type="button" onClick={onImport}>Reemplazar</button>
           </div>
           <div className="control-source-stats">
             <span><strong>{countLabel(meta.count)}</strong> registros</span>
@@ -748,15 +728,14 @@ function ControlSourceCard({ role, title, description, meta, fields = [], onImpo
         </>
       ) : (
         <div className="control-source-empty">
-          <span>{description}</span>
-          <button type="button" className="text-button" onClick={onImport}>Importar Excel <ArrowRight size={14} /></button>
+          <span>{description}. Usa “Importar Excel” en la barra superior para cargarlo.</span>
         </div>
       )}
     </article>
   );
 }
 
-function ControlPanelView({ model, period, workingDays, holidays, data, onImport, onSettings, onNavigate }) {
+function ControlPanelView({ model, period, workingDays, holidays, data }) {
   const periodBasedPayments = data.payments.filter((payment) => payment.dateBasis === 'period').length;
   const paymentDateFallbacks = data.payments.length - periodBasedPayments;
   const skippedRows = (data.clientMeta?.skippedRows || 0) + (data.paymentMeta?.skippedRows || 0);
@@ -809,10 +788,6 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
           <div className="control-hero-kicker"><span className="control-live-dot" /> CENTRO DE CONTROL · SOLO EN ESTE NAVEGADOR</div>
           <h2>Todo tu seguimiento,<br />en un solo lugar.</h2>
           <p>Administra los libros, revisa la calidad de los datos y ajusta la regla de puntualidad antes de consultar los resultados.</p>
-          <div className="control-hero-actions">
-            <button type="button" className="primary-button" onClick={onImport}><Upload size={15} /> Actualizar archivos</button>
-            <button type="button" className="control-hero-secondary" onClick={onSettings}><Settings2 size={15} /> Configurar regla</button>
-          </div>
         </div>
         <div className="control-score-panel">
           <span className="control-score-caption">PUNTUALIDAD DEL PERÍODO</span>
@@ -825,17 +800,6 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
           <p>{model.paidCount ? `${countLabel(model.statusCounts.paid)} puntuales de ${countLabel(model.paidCount)} con pago` : 'Sin pagos registrados en este período'}</p>
         </div>
       </section>
-
-      <div className="control-section-heading">
-        <div><span className="card-eyebrow">ACCESOS RÁPIDOS</span><h3>¿Qué necesitas hacer?</h3></div>
-        <span className="control-context-pill"><CalendarDays size={13} /> {period ? monthLabel(period) : 'Sin período'}</span>
-      </div>
-      <div className="control-action-grid">
-        <ControlActionCard icon={Upload} title="Actualizar Excel" detail="Reemplazar el Patrón o los pagos" onClick={onImport} />
-        <ControlActionCard icon={Settings2} title="Regla de puntualidad" detail={`${workingDays} días hábiles · ${countLabel(holidays.length)} feriados`} onClick={onSettings} />
-        <ControlActionCard icon={Users} title="Revisar contribuyentes" detail={`${countLabel(reviewCount)} casos requieren atención`} onClick={() => onNavigate('clients')} disabled={!model.rosterRows.length} />
-        <ControlActionCard icon={BarChart3} title="Explorar gráficos" detail="Comparar cobros y columnas" onClick={() => onNavigate('charts')} disabled={!data.payments.length} />
-      </div>
 
       <div className="control-main-grid">
         <section className="surface-card control-card control-sources-panel">
@@ -850,7 +814,6 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
               description="Listado de contribuyentes esperados"
               meta={data.clientMeta}
               fields={data.clientFields}
-              onImport={onImport}
             />
             <ControlSourceCard
               role="payments"
@@ -858,7 +821,6 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
               description="Contribuyente, importe, fecha y atributos"
               meta={data.paymentMeta}
               fields={data.paymentFields}
-              onImport={onImport}
             />
           </div>
         </section>
@@ -903,7 +865,6 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
             <span><i className="focus-dot focus-unpaid" /> Vencidos sin pago <strong>{countLabel(model.unpaidCount)}</strong></span>
             <span><i className="focus-dot focus-pending" /> Pendientes <strong>{countLabel(model.pendingCount)}</strong></span>
           </div>
-          <button type="button" className="control-link-button" onClick={() => onNavigate('clients')} disabled={!model.rosterRows.length}>Abrir seguimiento de contribuyentes <ArrowRight size={15} /></button>
         </section>
 
         <section className="surface-card control-card control-rule-panel">
@@ -913,20 +874,18 @@ function ControlPanelView({ model, period, workingDays, holidays, data, onImport
           </div>
           <div className="control-rule-summary"><strong>{workingDays}</strong><span>días hábiles<br />desde el inicio del mes</span></div>
           <p>{model.deadline ? `Vencimiento calculado: ${formatDate(model.deadline)}.` : 'Selecciona un período para calcular su vencimiento.'} {holidays.length ? `${countLabel(holidays.length)} feriados personalizados.` : 'No hay feriados personalizados.'}</p>
-          <button type="button" className="secondary-button control-rule-button" onClick={onSettings}><Settings2 size={14} /> Ajustar regla</button>
         </section>
       </div>
     </div>
   );
 }
 
-function SummaryView({ model, period, workingDays, onViewAll, onImport, onDismissQuarterly }) {
+function SummaryView({ model, period, workingDays, onViewAll, onDismissQuarterly }) {
   return (
     <>
       {model.missingRoster && (
         <Notice icon={Info} tone="info" title="Falta el Patrón de clientes">
-          El Excel de pagos solo muestra a quienes pagaron. Importa un Patrón completo para identificar quién no tiene pago registrado.
-          <button type="button" className="inline-link" onClick={onImport}>Importar Patrón</button>
+          El Excel de pagos solo muestra a quienes pagaron. Usa “Importar Excel” para cargar un Patrón completo e identificar quién no tiene pago registrado.
         </Notice>
       )}
       {model.quarterlyWarning && (
@@ -1199,7 +1158,7 @@ function ChartsView({ model, period, pivot, pivotOptions, pivotConfig, setPivotC
   );
 }
 
-function ClientsView({ model, period, search, setSearch, statusTab, setStatusTab, rows, onExport, onImport }) {
+function ClientsView({ model, period, search, setSearch, statusTab, setStatusTab, rows, onExport }) {
   const tabs = [
     { key: 'all', label: 'Todos', count: model.expectedCount },
     { key: 'late', label: 'Fuera de fecha', count: model.lateCount },
@@ -1214,12 +1173,10 @@ function ClientsView({ model, period, search, setSearch, statusTab, setStatusTab
           <h2>Seguimiento de pagos</h2>
           <p>{period ? `Estado de pago de cada cliente para ${monthLabel(period)}.` : 'Selecciona un período para ver el estado de pago.'}</p>
         </div>
-        <button type="button" className="secondary-button export-button" onClick={onExport}><Download size={15} /> Exportar datos</button>
       </div>
       {model.missingRoster && (
         <Notice icon={Info} tone="info" title="Falta un Patrón completo">
-          Sin el listado de clientes esperados no es posible identificar a quienes no pagaron. Importa un Excel de clientes para completar este seguimiento.
-          <button type="button" className="inline-link" onClick={onImport}>Importar Patrón</button>
+          Sin el listado de clientes esperados no es posible identificar a quienes no pagaron. Usa “Importar Excel” para cargar el Patrón y completar este seguimiento.
         </Notice>
       )}
       <section className="surface-card clients-table-card">
@@ -1869,14 +1826,14 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar activeView={activeView} onNavigate={handleNavigate} onImport={() => setImportOpen(true)} model={model} loading={loadingSample} />
+      <Sidebar activeView={activeView} onNavigate={handleNavigate} model={model} loading={loadingSample} />
       <main className="main-shell">
         <TopBar
           onImport={() => setImportOpen(true)}
           onExport={() => openClientExport(model.rosterRows, 'Seguimiento de pagos')}
           exportDisabled={loadingSample || !model.rosterRows.length}
           showExport={(activeView === 'overview' || activeView === 'control') && model.rosterRows.length > 0}
-          onSettings={() => setSettingsOpen(true)}
+          showImport={activeView === 'control' || data.payments.length > 0}
           currentTitle={currentTitle}
         />
         <div className="main-content">
@@ -1892,8 +1849,10 @@ function App() {
             onSettings={() => setSettingsOpen(true)}
             loading={loadingSample}
           />
-          <DeadlineStrip model={model} period={period} workingDays={workingDays} holidays={holidays} loading={loadingSample} />
-          {!loadingSample && <PeriodBasisNotice payments={data.payments} />}
+          {activeView === 'overview' && (loadingSample || data.payments.length > 0) && (
+            <DeadlineStrip model={model} period={period} workingDays={workingDays} holidays={holidays} loading={loadingSample} />
+          )}
+          {!loadingSample && activeView !== 'control' && <PeriodBasisNotice payments={data.payments} />}
           {activeView !== 'overview' && model.quarterlyWarning && !quarterlyNoticeDismissed && (
             <Notice icon={AlertTriangle} tone="warning" title="El Patrón indica periodicidad trimestral" onClose={() => setQuarterlyNoticeDismissed(true)}>
               Los estados se calculan con la regla mensual de {workingDays} días hábiles. Comprueba que el período seleccionado corresponda a una obligación mensual.
@@ -1902,8 +1861,7 @@ function App() {
 
           {sampleError && (
             <Notice icon={AlertTriangle} tone="warning" title="No se cargó la muestra">
-              {sampleError} Puedes importar tus propios archivos Excel para empezar.
-              <button type="button" className="inline-link" onClick={() => setImportOpen(true)}>Importar Excel</button>
+              {sampleError} {activeView === 'control' ? 'Usa “Importar Excel” en la barra superior para cargar tus archivos.' : 'Usa el botón de la tarjeta de inicio para cargar tus propios archivos.'}
             </Notice>
           )}
 
@@ -1911,7 +1869,7 @@ function App() {
             <GetStartedCard data={data} onImport={() => setImportOpen(true)} />
           ) : (
             <>
-              <StatsGrid model={model} loading={loadingSample} />
+              {activeView === 'overview' && <StatsGrid model={model} loading={loadingSample} />}
 
               {activeView === 'control' && (
                 <ControlPanelView
@@ -1920,9 +1878,6 @@ function App() {
                   workingDays={workingDays}
                   holidays={holidays}
                   data={data}
-                  onImport={() => setImportOpen(true)}
-                  onSettings={() => setSettingsOpen(true)}
-                  onNavigate={handleNavigate}
                 />
               )}
 
@@ -1932,7 +1887,6 @@ function App() {
                   period={period}
                   workingDays={workingDays}
                   onViewAll={() => handleNavigate('clients')}
-                  onImport={() => setImportOpen(true)}
                   onDismissQuarterly={() => setQuarterlyNoticeDismissed(true)}
                 />
               )}
@@ -1961,15 +1915,17 @@ function App() {
                   setStatusTab={setStatusTab}
                   rows={visibleClientRows}
                   onExport={() => openClientExport(visibleClientRows, 'Seguimiento de contribuyentes')}
-                  onImport={() => setImportOpen(true)}
                 />
               )}
             </>
           )}
 
           <footer className="page-footer">
-            <div><span className="footer-lock"><LockKeyhole size={13} /></span> Datos procesados localmente · No se transmite información fiscal</div>
-            <span>ONAT · Panel de disciplina de pago</span>
+            <div className="page-footer-local">
+              <span className="footer-privacy"><span className="footer-lock"><LockKeyhole size={13} /></span> Datos procesados localmente · No se transmite información fiscal</span>
+              <span className="footer-version">Versión {APP_VERSION}</span>
+            </div>
+            <span className="page-footer-brand">ONAT · Panel de disciplina de pago</span>
           </footer>
         </div>
       </main>

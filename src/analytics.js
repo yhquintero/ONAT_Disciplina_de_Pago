@@ -64,6 +64,17 @@ function matchesTax(taxCode, filter) {
   return !filter || !taxCode || taxCode === filter;
 }
 
+function normalizeDimensionLabel(value) {
+  return String(value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+}
+
+function normalizeDimensionKey(value) {
+  return normalizeDimensionLabel(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es');
+}
+
 function activeRosterMap(clients, period, taxFilter) {
   const map = new Map();
   clients.forEach((client) => {
@@ -286,8 +297,9 @@ export function buildPivot({
       key = payment.taxKey || payment.tax || 'sin tributo';
       label = payment.tax || 'Sin tributo';
     } else {
-      key = payment.dimensions?.[dimension] || 'sin dato';
-      label = key === 'sin dato' ? 'Sin dato' : key;
+      const dimensionLabel = normalizeDimensionLabel(payment.dimensions?.[dimension]);
+      key = normalizeDimensionKey(dimensionLabel);
+      label = dimensionLabel || 'Sin dato';
     }
     if (!key) {
       key = 'sin dato';

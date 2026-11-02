@@ -790,3 +790,156 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .donut-canvas { min-width: 110px; }
   .donut-legend { gap: 11px; }
 }
+
+/* Refinamiento visual: jerarquía más clara, tipografía legible y acciones sin duplicar. */
+.sidebar-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 8px 0;
+  border-top: 1px solid rgba(197, 220, 231, .12);
+}
+.sidebar-version {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 0 9px;
+  border: 1px solid rgba(197, 225, 232, .12);
+  border-radius: 7px;
+  color: #a8c3ce;
+  background: rgba(255, 255, 255, .035);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.page-footer { font-size: 9px; }
+.page-footer-local { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.footer-privacy { display: inline-flex; align-items: center; gap: 6px; }
+.footer-version { display: none; color: #647789; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.page-heading-row { align-items: center; }
+.heading-controls { flex-wrap: wrap; justify-content: flex-end; }
+.stat-card { min-height: 136px; padding: 15px 17px; }
+.stat-label { font-size: 11px; }
+.stat-value { font-size: clamp(22px, 1.9vw, 28px); }
+.stat-description { overflow: visible; min-height: 25px; font-size: 10px; line-height: 1.4; text-overflow: clip; white-space: normal; }
+.card-eyebrow { font-size: 9px; }
+.card-header h2 { font-size: 16px; }
+.card-header p { font-size: 11px; }
+.data-table thead th { font-size: 9px; }
+.data-table tbody td { font-size: 10px; }
+.status-badge { font-size: 9px; }
+.view-intro-row h2 { font-size: 22px; }
+.view-intro-row p { font-size: 11px; line-height: 1.55; }
+.pivot-heading h2 { font-size: 16px; }
+.pivot-heading p { font-size: 10px; }
+.pivot-select-wrap { font-size: 9px; }
+.pivot-select-wrap select { font-size: 10px; }
+.pivot-card-foot { font-size: 9px; }
+.control-view { gap: 18px; }
+.control-hero {
+  grid-template-columns: minmax(0, 1.4fr) minmax(215px, .6fr);
+  min-height: 215px;
+  padding: 28px 31px;
+}
+.control-hero-copy p { max-width: 620px; margin-bottom: 0; font-size: 12px; }
+.control-hero-kicker { font-size: 9px; }
+.control-score-caption { font-size: 9px; }
+.control-score-panel p { max-width: 225px; font-size: 10px; }
+.control-main-grid, .control-bottom-grid { gap: 16px; }
+.control-card { padding: 20px; }
+.control-card-heading h3 { font-size: 15px; }
+.control-card-heading p { font-size: 10px; }
+.control-source-copy strong { font-size: 10px; }
+.control-source-copy small { font-size: 9px; }
+.control-source-stats { font-size: 9px; }
+.control-source-fields > span { font-size: 8px; }
+.control-source-warning { font-size: 9px; }
+.control-source-empty > span { font-size: 10px; line-height: 1.5; }
+.control-quality-row { padding: 12px 0; }
+.control-quality-copy strong { font-size: 9px; }
+.control-quality-copy small { overflow: visible; font-size: 9px; line-height: 1.45; text-overflow: clip; }
+.control-quality-state { font-size: 8px; }
+.control-quality-note { font-size: 9px; }
+.control-focus-description { min-height: 0; font-size: 10px; }
+.control-focus-breakdown > span { font-size: 8px; }
+.control-rule-summary span { font-size: 9px; }
+.control-rule-panel > p { min-height: 0; font-size: 10px; line-height: 1.55; }
+.control-attention-badge, .control-rule-status, .control-completion-badge { font-size: 8px; }
+.notice { font-size: 10px; line-height: 1.6; }
+.notice-body strong { font-size: 11px; }
+.modal-backdrop { padding: 24px; overscroll-behavior: contain; }
+.modal { max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; }
+.modal-eyebrow { font-size: 9px; }
+.modal-intro { font-size: 12px; }
+.import-card-title-row h3 { font-size: 13px; }
+.import-card-copy p { font-size: 11px; }
+.import-card-hint, .import-file-meta { font-size: 9px; }
+.file-ready-chip, .import-detected-fields > strong { font-size: 8px; }
+.import-detected-field-list span { font-size: 8px; }
+.import-result, .import-guidance p { font-size: 10px; }
+.modal-privacy, .modal-footer { font-size: 9px; }
+.import-card-button { font-size: 10px; }
+.export-format-card { min-height: 86px; }
+.format-card-copy strong { font-size: 11px; }
+.format-card-copy small { font-size: 9px; }
+.export-settings-heading strong { font-size: 10px; }
+.export-settings-heading > span, .export-format-note { font-size: 9px; }
+.export-control > span { font-size: 9px; }
+.export-control select { font-size: 10px; }
+.orientation-options button { font-size: 9px; }
+.export-modal-footer .primary-button, .export-modal-footer .secondary-button { font-size: 10px; }
+.settings-field-block > label, .holiday-heading label { font-size: 11px; }
+.workday-input-wrap span { font-size: 10px; }
+.settings-field-block > small, .holiday-heading > span, .holiday-empty { font-size: 9px; }
+.holiday-add-row input, .holiday-add-row .secondary-button { font-size: 10px; }
+.holiday-chip { font-size: 9px; }
+.settings-note { font-size: 9px; }
+.settings-footer .primary-button, .settings-footer .secondary-button { font-size: 10px; }
+
+@media (max-width: 1000px) {
+  .sidebar-footer { display: none; }
+  .footer-version { display: inline-flex; }
+  .control-hero { grid-template-columns: minmax(0, 1fr) minmax(175px, .45fr); }
+  .control-card { padding: 17px; }
+}
+
+@media (max-width: 760px) {
+  .page-heading-row { align-items: flex-start; }
+  .heading-controls { justify-content: flex-start; }
+  .stat-card { min-height: 122px; padding: 11px; }
+  .stat-description { min-height: 0; font-size: 8px; }
+  .card-header h2 { font-size: 14px; }
+  .card-header p { font-size: 10px; }
+  .data-table thead th { font-size: 8px; }
+  .data-table tbody td { font-size: 9px; }
+  .control-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 21px 18px; }
+  .control-hero-copy p { font-size: 11px; }
+  .control-score-panel { display: grid; grid-template-columns: 70px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 12px; min-height: 0; padding: 13px 0 0; border-top: 1px solid rgba(221, 241, 241, .15); border-left: 0; text-align: left; }
+  .control-score-caption { grid-column: 1 / -1; margin-bottom: 8px; }
+  .control-score-ring { grid-column: 1; grid-row: 2; width: 66px; height: 66px; margin: 0; padding: 5px; }
+  .control-score-inner strong { font-size: 16px; }
+  .control-score-inner small { margin-top: 2px; font-size: 7px; }
+  .control-score-panel p { grid-column: 2; grid-row: 2; max-width: none; font-size: 9px; }
+  .control-main-grid, .control-bottom-grid { grid-template-columns: minmax(0, 1fr); }
+  .control-card { padding: 15px; }
+  .page-footer-local { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .modal-backdrop { align-items: flex-start; padding: 13px; }
+  .modal { max-height: calc(100dvh - 26px); margin: auto 0; padding: 17px 14px; }
+  .modal-header h2 { font-size: 15px; }
+  .modal-intro { font-size: 10px; }
+  .modal-footer { align-items: flex-start; }
+}
+
+@media (max-width: 390px) {
+  .control-hero { padding: 18px 14px; }
+  .control-hero-kicker { font-size: 8px; }
+  .control-source-file { margin-left: 0; }
+  .control-source-stats, .control-source-fields, .control-source-warning { margin-left: 0; }
+  .control-source-empty { margin-left: 0; }
+  .control-focus-breakdown { grid-template-columns: 1fr; }
+  .control-focus-breakdown > span { font-size: 9px; }
+  .footer-privacy { align-items: flex-start; line-height: 1.45; }
+  .topbar-actions { gap: 5px; }
+}
