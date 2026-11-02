@@ -34,6 +34,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\PanelControl.ps1
 
 También puedes abrir el archivo `.ps1` desde el Explorador si Windows permite ejecutarlo. Para HTTPS local, acepta la excepción del certificado de desarrollo autofirmado si tu navegador la muestra. El botón **Detener servidores** cierra los procesos iniciados por este panel; al cerrar la ventana puedes elegir detenerlos o dejarlos ejecutándose.
 
+### Aplicación de escritorio portable (Windows x64)
+
+El proyecto también se empaqueta como una aplicación de escritorio autocontenida, sin instalador. Incluye Chromium y todos los recursos compilados: en el equipo de destino no hacen falta Node.js, PowerShell, conexión a Internet ni un navegador instalado. La interfaz se abre desde archivos locales, sin servidor ni backend; los Excel seleccionados se procesan en memoria dentro de la aplicación.
+
+Para generar el paquete en una máquina de compilación con Node.js 22.12 o posterior e Internet:
+
+```bash
+npm ci
+npm run package:portable:windows
+```
+
+Se crea un único ejecutable: `release/ONAT-Disciplina-de-Pago-1.0.0-portable-x64.exe`. Cópialo directamente a la memoria USB y ejecútalo desde allí; no requiere descomprimir, instalar ni tener permisos de administrador. La acción **Aplicación portátil para Windows** también genera un artefacto descargable en GitHub Actions, con 30 días de retención.
+
+La carpeta `Datos locales ONAT`, junto al ejecutable, conserva preferencias y datos de sesión para que acompañen a la memoria USB. Los libros Excel importados no se guardan allí ni se transmiten; permanecen en memoria durante la sesión. Si la unidad no permite escritura, la aplicación usa el perfil local de Windows para esos datos auxiliares. El paquete no incluye los Excel de muestra. Como el ejecutable no tiene firma de editor, Windows puede mostrar una advertencia de seguridad al abrirlo.
+
 Comprobación antes de integrar cambios:
 
 ```bash
