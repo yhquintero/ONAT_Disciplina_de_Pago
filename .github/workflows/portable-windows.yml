@@ -28,9 +28,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Obtener código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -41,7 +41,7 @@ jobs:
       - name: Crear paquete portable para Windows x64
         run: npm run package:portable:windows
       - name: Publicar paquete como artefacto descargable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ONAT-Disciplina-de-Pago-portable-Windows-x64
           path: release/*.exe
