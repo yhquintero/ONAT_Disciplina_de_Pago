@@ -22,6 +22,18 @@ npm run dev:preview -- --port 4173  # HTTP para el preview de Arena
 
 El preview de Arena debe usar el comando HTTP; `npm run dev` queda reservado para el acceso HTTPS directo desde tu equipo.
 
+### Panel de Control PowerShell (Windows)
+
+El repositorio incluye `scripts/PanelControl.ps1`, un menú local para iniciar la Web segura o la vista previa, instalar dependencias, ejecutar pruebas, compilar, revisar seguridad y consultar la hoja de ruta. No requiere permisos de administrador y no modifica los Excel importados ni publica cambios.
+
+Desde la carpeta raíz del repositorio, abre PowerShell y ejecuta:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\PanelControl.ps1
+```
+
+También puedes usar `pwsh` si tienes PowerShell 7. El servidor que inicie el menú queda en otra ventana de terminal; ciérrala para detenerlo. Para HTTPS local, acepta la excepción del certificado autofirmado si tu navegador la muestra.
+
 Comprobación antes de integrar cambios:
 
 ```bash
@@ -87,6 +99,9 @@ Estas propuestas no se activan automáticamente; se pueden abordar una por una s
 7. **Revisión de casos y respaldo local:** añadir notas y estado de revisión por contribuyente, con exportación/importación de una copia de trabajo cifrada o descargable.
 8. **Accesibilidad y rendimiento:** atajos de teclado, mejores ayudas de lectura, paginación de tablas grandes y métricas para medir la velocidad de importación.
 9. **Uso compartido opcional:** si se necesita colaboración, evaluar perfiles, permisos y copias de respaldo; los datos fiscales requerirían un backend protegido y no deberían publicarse en GitHub Pages.
+10. **Alertas locales:** recordar vencimientos próximos y atrasos según la regla y los feriados configurados, sin transmitir datos.
+11. **Plantillas de informes:** guardar filtros, columnas y tamaños de página preferidos por tributo o periodicidad.
+12. **Modo presentación:** mostrar indicadores agregados y ocultar nombres/códigos para reuniones o capacitación.
 
 Como siguiente mejora recomendada, empezar por **validación y conciliación de importación**: revisar duplicados, campos vacíos y pagos sin correspondencia antes de que afecten al análisis, manteniendo el procesamiento local.
 
@@ -97,5 +112,6 @@ Como siguiente mejora recomendada, empezar por **validación y conciliación de 
 - `src/exporters.js`: creación local de libros `.xlsx` y PDF con formato de impresión.
 - `src/formatting.js`: formato monetario común para la interfaz y reportes.
 - `src/App.jsx` / `src/styles.css`: interfaz, importación, exportaciones y gráficos.
+- `scripts/PanelControl.ps1`: menú local de PowerShell para gestionar desarrollo, pruebas y compilación.
 - `tests/core.test.js`, `tests/exporters.test.js` y `tests/formatting.test.js`: pruebas de lectura de libros, extracción de columnas, fechas, métricas, exportaciones y formato monetario.
 - `.github/workflows/ci.yml` y `pages.yml`: verificación y publicación.
